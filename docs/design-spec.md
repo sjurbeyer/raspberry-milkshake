@@ -2,6 +2,8 @@
 
 Status: draft for iteration. Source notes: `../3D sound setup.md`.
 
+Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool and the container test loop exist (Phase 0a, partly). Not started: Qt UI, projectM host, audio backends, sinks, everything on the Pi.
+
 ## 0. Goals
 A Raspberry Pi 5 appliance that runs projectM with two modes:
 
@@ -217,7 +219,8 @@ Purpose: develop and validate logic, UI, collection format and sync off the Pi, 
   - **Main output**: a virtual display (1920×1080) shown through noVNC.
   - **Touch UI**: a second virtual display (1280×720) through noVNC. Mouse drag stands in for touch.
   - **LED chain**: a web page fed by the LED sink's `sim` backend over WebSocket, drawing the strip from the real sink frames. It also works against the real Pi over the network.
-- `docker compose run test` runs the suite. Optional: WSLg passthrough for native windows.
+- `docker compose run --rm test` builds and runs the suite. `docker compose run --rm dev` opens a shell in the container (source at `/src`, build tree at `/build`). The build tree lives in a named volume so artifacts stay out of the OneDrive-synced folder. In Git Bash on Windows, prefix commands that pass absolute container paths with `MSYS_NO_PATHCONV=1`.
+- Optional: WSLg passthrough for native windows.
 - **Dev profile defaults**: internal resolution 640×360 and a virtual clock, so cue scheduling is exact even if llvmpipe drops frames.
 
 ### 13.2 Backend abstractions
