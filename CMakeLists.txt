@@ -92,12 +92,13 @@ if(RM_BUILD_RENDER)
     src/render/egl_context.cpp
     src/render/projectm_host.cpp
     src/render/png.cpp
+    src/render/show_runner.cpp
   )
   target_include_directories(rm_render PUBLIC src)
   target_link_libraries(rm_render PUBLIC rm_core libprojectM::projectM OpenGL::EGL OpenGL::GLES3)
   target_compile_options(rm_render PRIVATE -Wall -Wextra -Wpedantic)
 
-  add_executable(rm_render_tests tests/render_test.cpp)
+  add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp)
   target_link_libraries(rm_render_tests PRIVATE rm_render Catch2::Catch2WithMain)
   target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_compile_options(rm_render_tests PRIVATE -Wall -Wextra -Wpedantic)

@@ -2,7 +2,7 @@
 
 Status: draft for iteration. Source notes: `../3D sound setup.md`.
 
-Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots; tested on llvmpipe) exist (Phase 0a, mostly). Not started: Qt UI, audio backends, sinks, everything on the Pi.
+Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots, and a `ShowRunner` that steps the sequencer, the A/V lead and the audio window per frame; tested on llvmpipe) exist (Phase 0a, mostly). Not started: Qt UI, audio backends, sinks, everything on the Pi.
 
 ## 0. Goals
 A Raspberry Pi 5 appliance that runs projectM with two modes:
@@ -263,3 +263,5 @@ Interactive latency harness (≤ 45 ms p95), 60 fps preset sweep, dynamic-resolu
 
 ### 13.5 What the container cannot tell you
 Frame time, GPU contention, latency and thermals. Software GL on x86 is not representative of the Pi's V3D GPU, so these acceptance targets (section 11) are only verified on hardware.
+
+Also, projectM's own timers (the MilkDrop `time` variable and the progress of a blended transition) follow the wall clock, not the frame count. Fast-stepped tests therefore assert hard cuts and picture content, not blend progress. Preset switches and audio windows are exact because the `ShowRunner` decides them from the frame index.
