@@ -52,6 +52,7 @@ add_executable(rm_tests
   tests/dir_catalog_test.cpp
   tests/demo_audio_test.cpp
   tests/preset_rating_test.cpp
+  tests/policy_pause_test.cpp
   tests/dir_catalog_rating_test.cpp
 )
 target_link_libraries(rm_tests PRIVATE rm_core Catch2::Catch2WithMain)
@@ -122,7 +123,8 @@ if(RM_BUILD_UI)
   target_link_options(rm-touch-ui PRIVATE -Wl,--no-as-needed)
   target_compile_options(rm-touch-ui PRIVATE -Wall -Wextra -Wpedantic)
 
-  add_executable(rm_ui_tests tests/ui_model_test.cpp tests/ui_theme_test.cpp tests/ui_svg_test.cpp)
+  add_executable(rm_ui_tests tests/ui_model_test.cpp tests/ui_theme_test.cpp tests/ui_svg_test.cpp
+    tests/ui_pause_test.cpp)
   target_link_libraries(rm_ui_tests PRIVATE rm_ui Qt6::Test Catch2::Catch2WithMain)
   target_compile_definitions(rm_ui_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   catch_discover_tests(rm_ui_tests PROPERTIES LABELS ui)
@@ -191,6 +193,7 @@ if(RM_BUILD_RENDER)
     src/render/downscaler.cpp
     src/render/jpeg.cpp
     src/render/engine.cpp
+    src/render/overlay.cpp
     src/render/dashboard_server.cpp
   )
   target_include_directories(rm_render PUBLIC src)
@@ -201,7 +204,7 @@ if(RM_BUILD_RENDER)
   target_compile_options(rm_render PRIVATE -Wall -Wextra -Wpedantic)
 
   add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp tests/engine_test.cpp
-    tests/engine_rating_test.cpp tests/dashboard_server_test.cpp)
+    tests/engine_rating_test.cpp tests/dashboard_server_test.cpp tests/engine_pause_test.cpp)
   target_link_libraries(rm_render_tests PRIVATE rm_render httplib::httplib Threads::Threads Catch2::Catch2WithMain)
   target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_compile_options(rm_render_tests PRIVATE -Wall -Wextra -Wpedantic)
@@ -224,7 +227,7 @@ if(RM_BUILD_UI AND RM_BUILD_RENDER)
   target_link_options(rm-app PRIVATE -Wl,--no-as-needed)
   target_compile_options(rm-app PRIVATE -Wall -Wextra -Wpedantic)
 
-  add_executable(rm_app_tests tests/app_bridge_test.cpp)
+  add_executable(rm_app_tests tests/app_bridge_test.cpp tests/app_bridge_pause_test.cpp)
   target_link_libraries(rm_app_tests PRIVATE rm_app Qt6::Test Catch2::Catch2WithMain)
   target_compile_definitions(rm_app_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   catch_discover_tests(rm_app_tests PROPERTIES LABELS app)

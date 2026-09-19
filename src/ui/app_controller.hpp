@@ -14,7 +14,9 @@ class LibraryModel;
 // core/policy; it does not play anything itself: the engine listens to the signals.
 class AppController : public QObject {
   Q_OBJECT
+  // `playing` means there is a current item, whether it is running or paused.
   Q_PROPERTY(bool playing READ playing NOTIFY transportChanged)
+  Q_PROPERTY(bool paused READ paused NOTIFY transportChanged)
   Q_PROPERTY(QString nowPlayingId READ nowPlayingId NOTIFY transportChanged)
   Q_PROPERTY(QString nowPlayingTitle READ nowPlayingTitle NOTIFY transportChanged)
   Q_PROPERTY(QStringList upcomingTitles READ upcomingTitles NOTIFY queueChanged)
@@ -23,7 +25,8 @@ class AppController : public QObject {
  public:
   explicit AppController(const LibraryModel* library, QObject* parent = nullptr);
 
-  bool playing() const { return queue_.state() == TransportState::Playing; }
+  bool playing() const { return queue_.state() != TransportState::Idle; }
+  bool paused() const { return queue_.state() == TransportState::Paused; }
   QString nowPlayingId() const;
   QString nowPlayingTitle() const;
   QStringList upcomingTitles() const;
@@ -40,6 +43,12 @@ class AppController : public QObject {
   Q_INVOKABLE void playNow(const QString& id);
   Q_INVOKABLE void addToQueue(const QString& id);
   Q_INVOKABLE void next();
+  // Pause and continue the current item; the queue is untouched. Next or play now end the pause.
+  Q_INVOKABLE void pause();
+  Q_INVOKABLE void resume();
+  Q_INVOKABLE void togglePause();
+  // Ends the current item and empties the queue. The UI asks the user first.
+  Q_INVOKABLE void stopAndClear();
 
  signals:
   void transportChanged();
@@ -47,6 +56,8 @@ class AppController : public QObject {
   void previewRequested(const QString& id);
   void previewStopped();
   void playRequested(const QString& id);
+  void pauseRequested();
+  void resumeRequested();
   void stopped();
 
  private:

@@ -17,6 +17,8 @@ EngineBridge::EngineBridge(AppController* controller, const LibraryModel* librar
   connect(controller, &AppController::playRequested, this, [this](const QString& id) {
     if (const Collection* c = library_->collection(id)) engine_->play(id.toStdString(), *c);
   });
+  connect(controller, &AppController::pauseRequested, this, [this] { engine_->pause(); });
+  connect(controller, &AppController::resumeRequested, this, [this] { engine_->resume(); });
   connect(controller, &AppController::stopped, this, [this] { engine_->stop(); });
 
   // Runs on the render thread; hop to the UI thread before touching the controller.

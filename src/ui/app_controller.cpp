@@ -60,6 +60,34 @@ void AppController::addToQueue(const QString& id) {
   emit queueChanged();
 }
 
+void AppController::pause() {
+  if (queue_.state() != TransportState::Playing) return;
+  queue_.pause();
+  emit pauseRequested();
+  emit transportChanged();
+}
+
+void AppController::resume() {
+  if (queue_.state() != TransportState::Paused) return;
+  queue_.resume();
+  emit resumeRequested();
+  emit transportChanged();
+}
+
+void AppController::togglePause() {
+  if (paused()) resume();
+  else pause();
+}
+
+void AppController::stopAndClear() {
+  if (queue_.state() == TransportState::Idle) return;
+  stop_preview();
+  queue_.clear();
+  emit stopped();
+  emit transportChanged();
+  emit queueChanged();
+}
+
 void AppController::next() {
   const auto now = queue_.next();
   if (now) emit playRequested(QString::fromStdString(*now));

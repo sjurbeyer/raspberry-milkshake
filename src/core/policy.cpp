@@ -15,9 +15,25 @@ void Queue::add(std::string id) {
   upcoming_.push_back(std::move(id));
 }
 
-void Queue::play_now(std::string id) { current_ = std::move(id); }
+void Queue::play_now(std::string id) {
+  current_ = std::move(id);
+  paused_ = false;
+}
+
+void Queue::pause() {
+  if (current_) paused_ = true;
+}
+
+void Queue::resume() { paused_ = false; }
+
+void Queue::clear() {
+  current_.reset();
+  upcoming_.clear();
+  paused_ = false;
+}
 
 std::optional<std::string> Queue::next() {
+  paused_ = false;
   if (upcoming_.empty()) {
     current_.reset();
     return std::nullopt;

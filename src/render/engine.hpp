@@ -13,7 +13,14 @@
 
 namespace rm {
 
-enum class EngineMode { Idle, Previewing, Playing };
+enum class EngineMode { Idle, Previewing, Playing, Paused };
+
+// What the main output shows while a collection is paused (a setting in the end; see the spec).
+enum class PauseDisplay {
+  Hold,  // the last frame stays on the output and nothing is rendered (the default)
+  Fade,  // the picture fades to black and a pause icon is drawn
+  Home,  // the output transitions to the home screen visualization
+};
 
 struct EngineStatus {
   EngineMode mode = EngineMode::Idle;
@@ -35,6 +42,14 @@ struct EngineConfig {
   // After the last track ends the visuals carry on for this many frames, so a queued collection
   // that starts right away does not flash the idle screen in between.
   int finish_grace_frames = 15;
+
+  PauseDisplay pause_display = PauseDisplay::Hold;
+  // Shown by PauseDisplay::Home: a preset path relative to preset_root, or a URL such as idle://.
+  std::string home_preset = "idle://";
+  // How the picture goes to the home visualization and back.
+  Transition pause_transition{Transition::Kind::Blend, 1.0};
+  // Length of the fades of PauseDisplay::Fade, in frames (0: half a second).
+  int fade_frames = 0;
 };
 
 // Decides what the main output shows: idle, a looping preview, or a playing collection (tracks in
@@ -54,6 +69,10 @@ class Engine {
   // Interrupts whatever is running.
   void play(std::string id, Collection collection);
   void stop();
+  // Freezes a playing collection (clock, cues and track ends) until resume(). Ignored unless a
+  // collection is playing. Play, next and stop end the pause.
+  void pause();
+  void resume();
   // Re-plans the current track from the catalog as it is now, carrying on from the same position.
   // Use after a rating change: pool choices are made up front, so they must be redone.
   void refresh_schedule();
@@ -62,6 +81,9 @@ class Engine {
   void set_finished_callback(std::function<void()> callback);
 
   void tick();
+  // Draws what belongs on the main output only (the pause icon). Call after tick(), after the LED
+  // sampling and before the frame is presented or read, so the LEDs never show the icon.
+  void draw_overlays();
   EngineStatus status() const;
 
  private:

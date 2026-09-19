@@ -7,6 +7,7 @@
 
 #include "core/cue_time.hpp"
 #include "core/demo_audio.hpp"
+#include "render/overlay.hpp"
 #include "render/show_runner.hpp"
 
 namespace rm {
@@ -61,7 +62,7 @@ Collection interactive_show(const Collection& base) {
 }
 
 struct Command {
-  enum class Kind { Preview, StopPreview, Play, Stop, Refresh };
+  enum class Kind { Preview, StopPreview, Play, Stop, Refresh, Pause, Resume };
   Kind kind = Kind::Stop;
   std::string id;
   Collection collection;
@@ -101,7 +102,59 @@ struct Engine::Impl {
 
   void go_idle() {
     active.reset();
+    reset_pause();
     load_idle();
+  }
+
+  int fade_frames() const { return config.fade_frames > 0 ? config.fade_frames : std::max(1, config.fps / 2); }
+
+  Overlay* overlay_or_null() {
+    if (!overlay && !overlay_failed) {
+      std::string error;
+      overlay = Overlay::create(host.config().width, host.config().height, error);
+      overlay_failed = !overlay;
+    }
+    return overlay.get();
+  }
+
+  std::string home_path() const {
+    const std::string& p = config.home_preset;
+    return p.find("://") != std::string::npos ? p : (config.preset_root / p).string();
+  }
+
+  void load_home(const Transition& transition) {
+    std::string error;
+    host.load_preset(home_path(), transition, error);
+  }
+
+  void reset_pause() {
+    paused = false;
+    pause_ticks = 0;
+    fade_in_left = 0;
+  }
+
+  void begin_pause() {
+    paused = true;
+    pause_ticks = 0;
+    fade_in_left = 0;
+    shown = config.pause_display;
+    if (shown == PauseDisplay::Fade) {
+      if (Overlay* o = overlay_or_null()) o->capture();
+      else shown = PauseDisplay::Hold;  // no overlay shaders: hold the frame instead
+    } else if (shown == PauseDisplay::Home) {
+      load_home(config.pause_transition);
+    }
+  }
+
+  void end_pause() {
+    paused = false;
+    pause_ticks = 0;
+    if (shown == PauseDisplay::Fade) {
+      fade_in_left = fade_frames();
+    } else if (shown == PauseDisplay::Home && active && !active->runner->current_preset().empty()) {
+      std::string error;
+      host.load_preset((config.preset_root / active->runner->current_preset()).string(), config.pause_transition, error);
+    }
   }
 
   // Starts a track; `from` is the position to start at (a preview starts at its window start).
@@ -143,6 +196,7 @@ struct Engine::Impl {
       a->length = std::max(config.dev_track_length, a->loop_end + kSampleRate);
     }
     active = std::move(a);
+    reset_pause();
     start_track(active->track);
   }
 
@@ -158,6 +212,7 @@ struct Engine::Impl {
       a->length = config.dev_track_length;
     }
     active = std::move(a);
+    reset_pause();
     start_track(0);
   }
 
@@ -179,7 +234,16 @@ struct Engine::Impl {
       case Command::Kind::Refresh:
         // Rebuild the schedule of the current track (pool choices depend on the catalog) and carry on
         // from the same position.
-        if (active) start_track(active->track, active->media_pos);
+        if (active) {
+          start_track(active->track, active->media_pos);
+          if (paused && shown == PauseDisplay::Home) load_home(kCut);  // seeking loaded a show preset
+        }
+        break;
+      case Command::Kind::Pause:
+        if (active && !active->preview && !active->finished && !paused) begin_pause();
+        break;
+      case Command::Kind::Resume:
+        if (paused) end_pause();
         break;
     }
   }
@@ -187,7 +251,7 @@ struct Engine::Impl {
   void publish_status(double media_seconds) {
     EngineStatus s;
     if (active) {
-      s.mode = active->preview ? EngineMode::Previewing : EngineMode::Playing;
+      s.mode = active->preview ? EngineMode::Previewing : (paused ? EngineMode::Paused : EngineMode::Playing);
       s.id = active->id;
       s.title = active->title;
       s.track = static_cast<int>(active->track) + 1;
@@ -213,6 +277,12 @@ struct Engine::Impl {
 
   std::unique_ptr<Active> active;  // render thread only
   std::int64_t tick_count = 0;
+  bool paused = false;
+  PauseDisplay shown = PauseDisplay::Hold;  // what the current pause is showing
+  int pause_ticks = 0;
+  int fade_in_left = 0;
+  std::unique_ptr<Overlay> overlay;  // created when first needed
+  bool overlay_failed = false;
 };
 
 Engine::Engine(ProjectMHost& host, const IPresetCatalog& catalog, EngineConfig config)
@@ -238,6 +308,16 @@ void Engine::play(std::string id, Collection collection) {
 void Engine::stop() {
   std::lock_guard lock(impl_->mutex);
   impl_->commands.push_back({Command::Kind::Stop, {}, {}});
+}
+
+void Engine::pause() {
+  std::lock_guard lock(impl_->mutex);
+  impl_->commands.push_back({Command::Kind::Pause, {}, {}});
+}
+
+void Engine::resume() {
+  std::lock_guard lock(impl_->mutex);
+  impl_->commands.push_back({Command::Kind::Resume, {}, {}});
 }
 
 void Engine::refresh_schedule() {
@@ -274,8 +354,32 @@ void Engine::tick() {
   }
 
   Impl::Active& a = *s.active;
+  if (s.paused) {
+    // The clock, cues and track ends stand still. What is drawn depends on the pause setting.
+    ++s.pause_ticks;
+    switch (s.shown) {
+      case PauseDisplay::Hold:
+        break;  // the last frame stays where it is
+      case PauseDisplay::Fade: {
+        const float t = std::min(1.0f, static_cast<float>(s.pause_ticks) / static_cast<float>(s.fade_frames()));
+        s.overlay->draw_captured(1.0f - t);
+        break;
+      }
+      case PauseDisplay::Home:
+        s.host.add_pcm_stereo(s.silence.data(), 512);
+        s.host.render();
+        break;
+    }
+    s.publish_status(static_cast<double>(a.media_pos) / static_cast<double>(kSampleRate));
+    return;
+  }
+
   const auto step = a.runner->step();
   a.media_pos = step.media_pos;
+  if (s.fade_in_left > 0 && s.overlay) {
+    s.overlay->draw_black(static_cast<float>(s.fade_in_left) / static_cast<float>(s.fade_frames()));
+    --s.fade_in_left;
+  }
 
   if (a.preview) {
     if (a.loop_end > 0 && step.media_pos >= a.loop_end) a.runner->seek(a.loop_start);
@@ -298,6 +402,13 @@ void Engine::tick() {
     return;
   }
   s.publish_status(static_cast<double>(step.media_pos) / static_cast<double>(kSampleRate));
+}
+
+void Engine::draw_overlays() {
+  Impl& s = *impl_;
+  if (s.paused && s.shown == PauseDisplay::Fade && s.pause_ticks >= s.fade_frames() && s.overlay) {
+    s.overlay->draw_pause_icon();
+  }
 }
 
 }  // namespace rm
