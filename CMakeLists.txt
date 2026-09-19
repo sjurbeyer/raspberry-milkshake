@@ -21,6 +21,7 @@ add_library(rm_core
   src/core/clock.cpp
   src/core/cue_time.cpp
   src/core/manifest.cpp
+  src/core/sequencer.cpp
 )
 target_include_directories(rm_core PUBLIC src)
 target_link_libraries(rm_core PUBLIC tomlplusplus::tomlplusplus)
@@ -38,6 +39,7 @@ add_executable(rm_tests
   tests/clock_test.cpp
   tests/cue_time_test.cpp
   tests/manifest_test.cpp
+  tests/sequencer_test.cpp
 )
 target_link_libraries(rm_tests PRIVATE rm_core Catch2::Catch2WithMain)
 target_compile_definitions(rm_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
