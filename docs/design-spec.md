@@ -144,6 +144,20 @@ bpm = 122                         # optional, else from analysis
 - **Smoothness**: pre-scaled thumbnails uploaded as textures, GridView with cell caching, no ShaderEffects/blur, no disk access on the UI thread, and 60 fps as a tested target.
 - **Interactive input**: USB keyboard read directly via evdev. Arrows for prev/next, number keys for favorites banks, space for random, Enter to lock/unlock auto-switch, `[` `]` for sensitivity, and an optional OSD on the main output (off by default).
 
+### 6.1 Visual identity
+The identity package is in `docs/raspberry-milkshake-visual-profile/raspberry-milkshake-brand/` (`BRAND.md` for the rules, `tokens/raspberry-milkshake.tokens.json` as the canonical token source). It was drawn for a desktop, VS Code-like interface, so this spec adapts it to a finger-operated 7" panel.
+
+- **Tokens in Qt**: a `Theme` QML singleton holds the colors, radii, spacing and durations from the tokens file. A unit test compares it with the JSON so the two cannot drift. The CSS files are for the dev dashboard and docs only.
+- **Look**: midnight canvas, hairline borders, no drop shadows. Raspberry marks live, armed or selected state only. Pale milk is reserved for focus rings, highlights and large labels, never small body text. Signal blue is for calibration and monitoring screens only.
+- **Touch sizing** (the panel is about 8.3 px/mm): touch targets are at least 72 px (about 9 mm). Type is scaled about 1.7× from the brand's desktop sizes, keeping their ratios: controls 22 px, metadata 20 px, titles 30 to 38 px. Verify on the real panel.
+- **Selection**: a selected tile or preset gets a 2 px milk border and a raised-surface fill. The play button turns raspberry with a midnight icon while live. Filter dropdowns and the view toggle use the same "pressed" state.
+- **Labels**: UI chrome is lowercase, following the brand tone. Collection titles are shown exactly as authored.
+- **Marks**: the full mark appears in the top bar and on the startup splash (the lockup). The mark alone is used on calibration screens (A/V and LED). The mono mark is for tinted states and low-bandwidth LED use.
+- **Motion**: transitions use the 160, 240 and 360 ms durations with the `ease-liquid` curve (`cubic-bezier(.22, 1, .36, 1)`, which is `Easing.BezierCurve` in QML). Only the mark, the live dot and the visualizer move; the chrome stays still. A `reduced_motion` config option freezes the mark and leaves a low-contrast breathing dot.
+- **GPU cost**: the UI shares the GPU with projectM (section 2), so continuous animation is confined to small areas (the mark and the live dot), and the UI otherwise renders on demand. Audio-reactive mark scaling (bass enlarges the spiral by 2 to 5 %) needs a low-rate band-energy feed from the engine and is optional, gated by measured GPU headroom.
+- **Live indicator**: the projected output is a boundaryless stage, so nothing is drawn over it by default. The brand's thin frame with a raspberry live dot and `LIVE` label appears around the main-output pane of the dev dashboard and in the touch UI's playback bar.
+- **Open**: `BRAND.md` recommends sine easing while the CSS and tokens use the `ease-liquid` quint-out curve, and the tokens file has no easing token. This spec follows the CSS curve until the profile is reconciled.
+
 ## 7. Output sinks: compute once
 MilkDrop is a feedback system: each frame warps the previous frame. Evaluating only at LED locations therefore does not work, because the full field must be simulated at some resolution. The savings come from three other places:
 
@@ -162,7 +176,7 @@ src/engine/   audio, sequencer, projectM host, canvas, sinks
 src/ui/       QML and view models
 src/app/      main, config, systemd glue
 tools/        rm-import, rm-bench
-docs/         design-spec.md (later split: show-format, latency-budget, hardware)
+docs/         design-spec.md, show-format.md, raspberry-milkshake-visual-profile/ (brand)
 packaging/    systemd unit, image build, config templates
 tests/        parser, sequencer (fake clock), cue timing
 ```
@@ -216,7 +230,7 @@ Purpose: develop and validate logic, UI, collection format and sync off the Pi, 
 
 - **Image**: multi-stage Dockerfile (`dev`, `test`, `run` targets) on the same Debian base as Raspberry Pi OS, with Qt 6, pinned projectM, ALSA/ffmpeg dev libs, Mesa (software OpenGL, llvmpipe), Xvfb, x11vnc and noVNC. Build multi-arch (buildx) so the Pi uses the same dependency set.
 - **Compose dashboard** (`docker compose up`, browser at localhost):
-  - **Main output**: a virtual display (1920×1080) shown through noVNC.
+  - **Main output**: a virtual display (1920×1080) shown through noVNC, framed per the brand's projector-output rule (thin neutral line, small raspberry live dot and `LIVE` label).
   - **Touch UI**: a second virtual display (1280×720) through noVNC. Mouse drag stands in for touch.
   - **LED chain**: a web page fed by the LED sink's `sim` backend over WebSocket, drawing the strip from the real sink frames. It also works against the real Pi over the network.
 - `docker compose run --rm test` builds and runs the suite. `docker compose run --rm dev` opens a shell in the container (source at `/src`, build tree at `/build`). The build tree lives in a named volume so artifacts stay out of the OneDrive-synced folder. In Git Bash on Windows, prefix commands that pass absolute container paths with `MSYS_NO_PATHCONV=1`.
