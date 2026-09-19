@@ -12,7 +12,9 @@ A Raspberry Pi 5 appliance that runs projectM with two modes:
 
 The Pi's HDMI goes to the Marantz NR1510 AVR and on to the projector. The 7" Touch Display 2 is only a selector and remote for the main output.
 
-Non-goals for v1: LED and spotlight output (designed for, built in Phase 5), AI HAT+ use, network streaming sources.
+Non-goals for v1: LED and spotlight output (designed for, built in Phase 5), AI HAT+ use, network streaming sources, Bluetooth audio (backlog, section 15.3).
+
+The owner's prioritized ideas list is in section 15. Its high-priority items are a stop control, interactive as the first tile (done), interactive mode by default when no touch display is connected, and a touch display sleep mode.
 
 ## 1. Hardware
 | Item | Decision |
@@ -63,7 +65,7 @@ Keyboard (evdev) ─► Controller (interactive)
 - **OS**: Raspberry Pi OS Lite 64-bit (current stable), with no desktop or compositor. Direct ALSA (exclusive), with no PulseAudio or PipeWire, since this is a dedicated appliance.
 - **Stack**: C++23 (GCC 14 on Raspberry Pi OS Trixie), Qt 6 / QML, CMake, SQLite for the library index.
 - **Risk**: the packaged Qt may lack the EGLFS/KMS plugin. Fallback is a custom Qt build.
-- **Risk**: GPU contention. The UI and projectM share one V3D GPU. Keep the UI static when idle and measure UI frame times under heavy presets. Fallback is Qt Quick's software backend for the UI.
+- **Risk**: GPU contention. The UI and projectM share one V3D GPU. Keep the UI static when idle and measure UI frame times under heavy presets. The touch display sleep mode (section 15.1, item 4) is the main mitigation. Fallback is Qt Quick's software backend for the UI.
 
 ## 3. Audio and sync
 
@@ -224,6 +226,8 @@ None are on the critical path, so they are out of v1. The engine exposes an `Ana
 
 MVP is Phases 0a–4.
 
+**Backlog placement** (details in section 15): the stop control (item 1) and the now-playing detail (item 9) are small Phase 3 additions; the sleep mode (item 4) and the symbols and interrupt confirmation (item 8) are Phase 3 UI work; settings (item 5) grows with each feature that needs one; the headless interactive start (item 3) is Phase 6 appliance behaviour, with its no-UI start mode addable earlier; the LED editor (item 6) waits for Phase 5; the home screen sound and light (item 7), the interactive control screen (item 10), background animations (item 11) and Bluetooth (item 12) come after the MVP.
+
 ## 11. Acceptance targets
 - Curated presets hold ≥ 60 fps at the default internal resolution, with 1%-low ≥ 55 fps.
 - Touch scroll and swipe run at 60 fps, and tap-to-response is ≤ 100 ms, including while a heavy preset plays.
@@ -303,3 +307,50 @@ HTTP threads (dev)  DashboardServer: MJPEG, LED colours, status
 - **Dev stand-ins until audio exists**: every track plays for the same length (60 s, or `--track-seconds`), and the audio the visuals react to is synthetic music. Both are replaced when audio decoding lands.
 - **Tests**: 11 engine tests (frame-exact cues, track order and finish, preview looping, interruption rules, cross-thread commands) and 9 bridge tests running the real controller against a real engine. The full flow was also driven through the browser path (VNC taps): preview, play, queue, automatic advance, return to idle, preview again.
 - **Threading rule**: only the render thread touches the projectM host and GL context; the UI thread only posts commands and reads the last published status.
+
+## 15. Backlog: the owner's ideas list
+These are requirements and ideas in the owner's own priority order. Each item says what is wanted, how it fits the design above, and what it depends on. "Done" means it exists in the code today. Open questions are collected at the end of the section.
+
+### 15.1 High priority
+1. **A way to stop the music.** Today only "next" exists, and playback stops only when the queue runs out. Add a stop control to the playback bar (`AppController::stop()`; the engine already has `stop()` and the bridge already handles the `stopped` signal). Stop ends the current item and returns the main output to idle. Covered by controller, bridge and QML tests like the other transport actions.
+2. **Interactive is the first option, top left of the grid.** *Done:* the library sorts interactive collections first, then everything else alphabetically, so the "Interactive visualization" tile is top left of the grid and first in the swipe view under the default "all" filter (a library-order test guards it). Under a type filter that excludes interactive it is naturally absent.
+3. **No touch display connected: start in interactive mode.** If the app starts without the touch display attached, it starts the interactive collection on the main output by itself and is driven from the keyboard, with no touch UI window. Design: detect the display at startup (the Qt screen list, backed by the DRM connector status of the DSI output); the engine, controller and bridge already work without a QML view, so this is a "headless UI" start mode (also useful for tests: an `--no-ui` option). Keyboard navigation is the jam-mode control from section 6. Whether a display plugged in later takes over is open (see the questions below); the first version checks at startup only. This belongs with Phase 6 (appliance behaviour) but the headless start mode is cheap to add earlier.
+4. **A sleep mode for the touch display.** After a settings-controlled idle time the touch display shows a blurred version of the active visualization until it is tapped, to ease compute. Design:
+   - **No second render.** The main output is already downscaled on the GPU for the LEDs (section 7). The sleep screen shows a somewhat larger version of that picture (for example 160×90) scaled up with smooth filtering, which gives the blur for free, refreshed at a low rate (about 5 to 10 frames per second). The UI stops all other work: no animations, render on demand only.
+   - **Wake-up:** the first tap only wakes the screen and is not passed to whatever is underneath, then the home screen returns at the view it left.
+   - **Backlight:** dimming the panel through the Linux backlight interface is a possible extra to check on the real Touch Display 2.
+   - **Why it matters:** the UI and projectM share one GPU (section 2). Sleep mode is the main mitigation for that risk, so it should land before heavier UI effects (15.3, item 11).
+   - When the main output is idle, the sleep screen is simply dark.
+
+### 15.2 Medium priority
+5. **Settings.** A settings screen (a gear in the top bar) backed by a config file on the writable `/data` partition, read at start and applied live where possible. Every setting has a default, so no file is needed. Known settings so far: touch display sleep timeout (item 4), reduced motion (section 6.1), the A/V offset from the calibration screen (section 3.1), the jam input device and gain (section 1), the home screen sound and light options (item 7), and the entry to the LED editor (item 6).
+6. **LED editor.** An on-device editor for the LED chain, replacing the hard-coded perimeter layout the dev dashboard uses today. Per strip: number of LEDs, where its colours come from on the picture (an edge, a region or a path, with an inset), direction, whether the chain loops (the end wraps to the start) or not, and brightness, gamma and white balance. Design: strips are polylines in the picture's coordinate space and are stored in a validated file (`leds.toml`, checked the same way as `collection.toml`). At run time they become the existing `LedLayout`, and the sampling path is unchanged, so the picture is still evaluated once (section 7). The dashboard's LED pane shows the edited layout during development. Real transports (Phase 5) are needed before it drives hardware.
+7. **Home screen sound effects and light visualization.** While browsing, gentle background sound (the example given is the ambient sounds of video game console menus) and a calm light pattern, both switchable in settings. Design notes:
+   - **Sound needs a mixer.** Audio output is exclusive ALSA with no sound server (section 2), so the engine needs a small software mixer to play interface sounds next to music. Interface sounds are quiet and only play when idle or while music is ducked.
+   - **Light:** the LEDs (and the idle main output) show a slow ambient pattern at the home screen. Today the idle main output is projectM's built-in idle preset; this makes the idle visual configurable.
+   - **Motion rules:** honours reduced motion and the sleep mode.
+8. **Symbols instead of text; play on the cover; confirm before interrupting.**
+   - **Icons** replace the words for play, add to queue, next (and stop, item 1), in the brand's flat style. The visible text goes, but each control keeps an accessible name so tests and screen readers still work.
+   - **Play on the cover:** in the swipe view the play button sits on the album cover.
+   - **Confirmation:** choosing "play now" while something plays asks "Interrupt <title>?" with cancel and confirm at the 72 px touch size. Add to queue and next need none. This changes the existing "play now" tests, which gain a confirm step.
+9. **Now playing shows both the collection and the track.** For example "Night Drive · Intro (track 1 of 2)". The engine status already has the track number and count; it also needs the track title (from the manifest `title`, falling back to the file name) and the controller needs to expose it. For playlists it shows the playlist name and the title of the entry. The dashboard status pane shows the same.
+
+### 15.3 Low priority
+10. **Interactive-mode control screen.** In interactive mode, pressing the touch display opens a control panel that can be closed again (an x). It offers:
+    - rate the current preset (the 0 to 5 buttons from section 4),
+    - next preset and previous preset,
+    - an automatic/manual transitions toggle,
+    - colour randomization,
+    - a preset file tree, its own tab in the panel, to change collection and pick presets by hand.
+    Dependencies: a preset history (for "previous"), a manual mode with no automatic switching, a "load this preset now" command, and a browse API over the preset folders. Colour randomization has no projectM API. It is probably a hue shift applied after projectM has drawn, which needs a copy of the picture into a texture and one extra full-screen pass (a cost to measure on the Pi), so its feasibility is open. The same actions are on keys for someone at the keyboard.
+11. **Lightweight animations behind the albums** (for example particles, or effects that react to touch). They must stay within a tiny GPU budget because the UI shares the GPU with projectM: a single shader or a particle system with a capped count, off during sleep mode and while a heavy preset runs, and switched off by reduced motion. Measure UI frame time under heavy presets before enabling it, and build it after the sleep mode (item 4).
+12. **Bluetooth audio with interactive visuals.** Bluetooth audio adds buffering (typically 100 to 250 ms) so the visuals need a latency offset to line up with the sound. The two cases differ:
+    - *Bluetooth as an input* (a phone streaming to the Pi): the visuals are built from the received sound as it arrives, so the offset is the same output-path A/V offset as for shows (section 3.1), except that live sound cannot be looked ahead, so visuals can only be delayed, never advanced.
+    - *Bluetooth as an output* (a wireless speaker): the visuals must be delayed by the measured transport latency, which needs a delay buffer on the visual side and a per-output offset.
+    The audio stack matters: the design uses ALSA directly with no PipeWire or PulseAudio. BlueZ with a bluez-alsa bridge keeps that, otherwise Bluetooth would force a sound server.
+
+### 15.4 Open questions raised by the list
+- **Stop and the queue:** should stop also clear the upcoming queue? Proposed: yes, because the queue model has no "stopped with items waiting" state, so stop returns to idle with an empty queue.
+- **Display hot-plug (item 3):** should plugging the touch display in later bring up the touch UI, or only a restart? Proposed: startup check only for the first version.
+- **Bluetooth direction (item 12):** input, output, or both? The list says only "Bluetooth support", and the two cases have different designs.
+- **Sleep mode blur source (item 4):** the proposal above reuses the LED downscale. If a sharper "blurry version" is wanted, that costs a bigger readback and is worth measuring on the Pi first.
