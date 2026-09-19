@@ -1,0 +1,24 @@
+:root {
+  --rm-canvas: #18181c;
+  --rm-surface: #222228;
+  --rm-surface-raised: #2b2b32;
+  --rm-border: #3d3f46;
+  --rm-text: #f2f3f5;
+  --rm-text-muted: #9da1aa;
+  --rm-raspberry: #e84f8c;
+  --rm-raspberry-soft: #f47ca9;
+  --rm-milk: #ffb8d2;
+  --rm-signal: #7aa2f7;
+  --rm-focus: #ffb8d2;
+  --rm-radius-control: 6px;
+  --rm-radius-panel: 10px;
+  --rm-ease-liquid: cubic-bezier(.22, 1, .36, 1);
+}
+
+.rm-app { background: var(--rm-canvas); color: var(--rm-text); font: 400 13px/1.45 Inter, ui-sans-serif, system-ui, sans-serif; }
+.rm-panel { background: var(--rm-surface); border: 1px solid var(--rm-border); border-radius: var(--rm-radius-panel); }
+.rm-control { background: var(--rm-surface); border: 1px solid var(--rm-border); border-radius: var(--rm-radius-control); color: var(--rm-text); transition: background 160ms var(--rm-ease-liquid), border-color 160ms var(--rm-ease-liquid); }
+.rm-control:hover { background: var(--rm-surface-raised); }
+.rm-control[aria-pressed="true"], .rm-control.is-live { background: var(--rm-raspberry); border-color: var(--rm-raspberry); color: var(--rm-canvas); }
+.rm-control:focus-visible { outline: 2px solid var(--rm-focus); outline-offset: 2px; }
+.rm-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rm-raspberry); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rm-raspberry) 20%, transparent); }

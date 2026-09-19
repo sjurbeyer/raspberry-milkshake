@@ -1,0 +1,34 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "color": {
+    "canvas": { "$value": "#18181C", "$type": "color" },
+    "surface": { "$value": "#222228", "$type": "color" },
+    "surface-raised": { "$value": "#2B2B32", "$type": "color" },
+    "border": { "$value": "#3D3F46", "$type": "color" },
+    "text": { "$value": "#F2F3F5", "$type": "color" },
+    "text-muted": { "$value": "#9DA1AA", "$type": "color" },
+    "raspberry": { "$value": "#E84F8C", "$type": "color" },
+    "milk": { "$value": "#FFB8D2", "$type": "color" },
+    "raspberry-soft": { "$value": "#F47CA9", "$type": "color" },
+    "signal": { "$value": "#7AA2F7", "$type": "color" },
+    "focus": { "$value": "#FFB8D2", "$type": "color" }
+  },
+  "space": {
+    "1": { "$value": "4px", "$type": "dimension" },
+    "2": { "$value": "8px", "$type": "dimension" },
+    "3": { "$value": "12px", "$type": "dimension" },
+    "4": { "$value": "16px", "$type": "dimension" },
+    "6": { "$value": "24px", "$type": "dimension" },
+    "8": { "$value": "32px", "$type": "dimension" }
+  },
+  "radius": {
+    "control": { "$value": "6px", "$type": "dimension" },
+    "panel": { "$value": "10px", "$type": "dimension" },
+    "app": { "$value": "16px", "$type": "dimension" }
+  },
+  "duration": {
+    "fast": { "$value": "160ms", "$type": "duration" },
+    "base": { "$value": "240ms", "$type": "duration" },
+    "slow": { "$value": "360ms", "$type": "duration" }
+  }
+}

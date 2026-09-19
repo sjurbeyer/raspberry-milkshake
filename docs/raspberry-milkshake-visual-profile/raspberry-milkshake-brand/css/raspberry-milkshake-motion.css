@@ -1,0 +1,9 @@
+@keyframes rm-vortex-turn { to { transform: rotate(360deg); } }
+@keyframes rm-live-breathe { 50% { transform: scale(1.35); opacity: .7; } }
+
+.rm-logo-vortex { transform-origin: center; animation: rm-vortex-turn 9s linear infinite; }
+.rm-live-dot { animation: rm-live-breathe 1.6s var(--rm-ease-liquid, ease) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-logo-vortex, .rm-live-dot { animation: none; }
+}
