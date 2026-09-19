@@ -122,9 +122,15 @@ void render_thread(const RenderSettings& settings, rm::DashboardServer& dashboar
   double fps_smoothed = settings.fps;
   double render_ms = 0;
 
+  std::string last_logged_error;
   while (!stop) {
     const auto start = std::chrono::steady_clock::now();
     engine.tick();
+    const rm::EngineStatus status = engine.status();
+    if (!status.last_error.empty() && status.last_error != last_logged_error) {
+      qWarning().noquote() << "preset failed to load:" << QString::fromStdString(status.last_error);
+      last_logged_error = status.last_error;
+    }
     const rm::Frame full = host->read_frame();
     const auto colors = rm::sample_leds(scaler.capture(settings.width, settings.height), layout);
     std::vector<std::uint8_t> jpeg = rm::encode_jpeg(full, 75);
@@ -144,7 +150,7 @@ void render_thread(const RenderSettings& settings, rm::DashboardServer& dashboar
       hex += buf;
     }
     dashboard.publish(std::move(jpeg), "{\"hex\":\"" + hex + "\"}",
-                      status_json(engine.status(), settings, egl->renderer(), catalog.size(), colors.size(),
+                      status_json(status, settings, egl->renderer(), catalog.size(), colors.size(),
                                   fps_smoothed, render_ms));
 
     next += period;

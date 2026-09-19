@@ -68,6 +68,11 @@ shell:
 image:
     docker compose build dev
 
+# Forget the compiled shaders (presets stutter on their first use again until it refills)
+forget-shaders:
+    docker compose down
+    docker volume rm raspberry-milkshake_shadercache
+
 # Throw away the build cache volume (the next build starts from scratch; presets are kept)
 clean-build:
     docker compose down
