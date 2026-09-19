@@ -62,6 +62,48 @@ set_tests_properties(rm_validate_reports_invalid_manifest PROPERTIES
 set_tests_properties(rm_validate_example rm_validate_reports_missing_files
   rm_validate_reports_invalid_manifest PROPERTIES LABELS unit)
 
+# projectM host: needs EGL + OpenGL ES 3 (Mesa llvmpipe in the dev container, V3D on the Pi).
+option(RM_BUILD_RENDER "Build the projectM host and render tests" OFF)
+if(RM_BUILD_RENDER)
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+  set(ENABLE_GLES ON CACHE BOOL "" FORCE)
+  set(ENABLE_PLAYLIST OFF CACHE BOOL "" FORCE)
+  set(ENABLE_SYSTEM_PROJECTM_EVAL OFF CACHE BOOL "" FORCE)
+  set(ENABLE_SDL_UI OFF CACHE BOOL "" FORCE)
+  set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(projectm
+    GIT_REPOSITORY https://github.com/projectM-visualizer/projectm.git
+    GIT_TAG v4.1.7
+    GIT_SHALLOW TRUE
+    SYSTEM)
+  # projectM derives its version macros from the top-level project's version, which is not ours.
+  set(CMAKE_PROJECT_VERSION 4.1.7)
+  set(CMAKE_PROJECT_VERSION_MAJOR 4)
+  set(CMAKE_PROJECT_VERSION_MINOR 1)
+  set(CMAKE_PROJECT_VERSION_PATCH 7)
+  FetchContent_MakeAvailable(projectm)
+  unset(CMAKE_PROJECT_VERSION)
+  unset(CMAKE_PROJECT_VERSION_MAJOR)
+  unset(CMAKE_PROJECT_VERSION_MINOR)
+  unset(CMAKE_PROJECT_VERSION_PATCH)
+  find_package(OpenGL REQUIRED COMPONENTS EGL GLES3)
+
+  add_library(rm_render
+    src/render/egl_context.cpp
+    src/render/projectm_host.cpp
+    src/render/png.cpp
+  )
+  target_include_directories(rm_render PUBLIC src)
+  target_link_libraries(rm_render PUBLIC rm_core libprojectM::projectM OpenGL::EGL OpenGL::GLES3)
+  target_compile_options(rm_render PRIVATE -Wall -Wextra -Wpedantic)
+
+  add_executable(rm_render_tests tests/render_test.cpp)
+  target_link_libraries(rm_render_tests PRIVATE rm_render Catch2::Catch2WithMain)
+  target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+  target_compile_options(rm_render_tests PRIVATE -Wall -Wextra -Wpedantic)
+  catch_discover_tests(rm_render_tests TEST_SPEC "~[.]" PROPERTIES LABELS render)
+endif()
+
 # Tests tagged [sequencer] get their own label; everything else is "unit".
 catch_discover_tests(rm_tests TEST_SPEC "[sequencer]" PROPERTIES LABELS sequencer)
 catch_discover_tests(rm_tests TEST_SPEC "~[sequencer]" PROPERTIES LABELS unit)

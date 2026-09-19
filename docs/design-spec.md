@@ -2,7 +2,7 @@
 
 Status: draft for iteration. Source notes: `../3D sound setup.md`.
 
-Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool and the container test loop exist (Phase 0a, partly). Not started: Qt UI, projectM host, audio backends, sinks, everything on the Pi.
+Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots; tested on llvmpipe) exist (Phase 0a, mostly). Not started: Qt UI, audio backends, sinks, everything on the Pi.
 
 ## 0. Goals
 A Raspberry Pi 5 appliance that runs projectM with two modes:
@@ -92,7 +92,8 @@ This is the only latency-critical path.
 - No triple buffering. Use atomic KMS flips.
 
 ## 4. Rendering and performance
-- projectM 4.x built with GLES on Mesa V3D (Pi 5 exposes GLES 3.1). **Known issue**: projectM 4.1.4 had a GLES/NPOT texture-resize bug from SOIL2 detection. Pin a newer version or carry a patch.
+- **projectM v4.1.7**, pinned through CMake FetchContent, built static with GLES on (Mesa V3D on the Pi, which exposes GLES 3.1; llvmpipe in the dev container), with the playlist library off and the bundled projectM-eval. Version 4.1.4 had a GLES/NPOT texture-resize bug from SOIL2 detection; whether 4.1.7 still has it is unverified on the Pi (spike S1).
+- **Output constraint**: projectM 4.1.7 always draws its final image into the context's default framebuffer (`glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)` in `ProjectM::RenderFrame`; upstream has a "ToDo: allow external apps to provide a custom target framebuffer"). The host therefore renders into the surface of its EGL context (an offscreen pbuffer in tests and the container).
 - **Dynamic internal resolution.** Default 1280×720 (range 640×360 to 1920×1080), upscaled in the final blit, with a hysteresis controller holding 60 fps.
 - **CPU cost scales with the mesh, not the pixels.** Per-pixel equations run on the warp mesh (CPU, projectM-eval), so mesh size is a setting.
 - **`rm-bench`**: renders every preset headless for N seconds, records avg and p99 frame time, and tags each preset ok / heavy / broken. Only "ok" presets enter pools by default. It also pre-warms the Mesa shader cache on `/data`, because preset switches otherwise cause 50–300 ms hitches from parse and shader compile.
@@ -161,12 +162,13 @@ The identity package is in `docs/raspberry-milkshake-visual-profile/raspberry-mi
 ## 7. Output sinks: compute once
 MilkDrop is a feedback system: each frame warps the previous frame. Evaluating only at LED locations therefore does not work, because the full field must be simulated at some resolution. The savings come from three other places:
 
-1. **One canvas, many sinks.** All outputs share one internal render target (the "virtual canvas", the union of the screen and LED domains).
-   - The screen sink is an upscale blit.
-   - An LED or spotlight sink is a small GPU pass that samples the canvas at precomputed UV positions (area-averaged via mip level) into a 1×N texture. It is read back asynchronously (PBO plus fence), then gamma/limit/dither and send.
+1. **One canvas, many sinks.** All outputs share one rendered image (the "virtual canvas", the union of the screen and LED domains). Because projectM only draws into framebuffer 0 (section 4), the canvas is that framebuffer.
+   - The screen sink is the presented framebuffer (with an upscale when the internal resolution is below the display's).
+   - An LED or spotlight sink takes a GPU-side downscale of the canvas before it is presented: `glBlitFramebuffer` with linear filtering from framebuffer 0 into a small FBO, then an asynchronous readback (PBO plus fence) of just that small image, sampled at the precomputed LED positions, then gamma/limit/dither and send.
    - Nothing is evaluated twice.
-2. **LED-only mode.** With no screen attached, drop the canvas to ~160×90 to 320×180, reduce the mesh, and skip the final blit. This cuts GPU cost by roughly 10–50×.
-3. **A cost planner** compares "one union canvas" against "separate canvases per sink". It only pays off when the domains differ hugely, such as a room-wide LED ring plus a 16:9 screen. v1 always uses the union canvas.
+2. **LED-only mode.** With no screen attached, the context's surface is simply small (~160×90 to 320×180, which the headless pbuffer path already supports), with a reduced mesh and no presentation. This cuts GPU cost by roughly 10–50×.
+3. **A canvas larger than the screen** (LEDs that extend beyond the picture) is not possible with stock projectM 4.1.7, since it cannot render to a custom target. Options for Phase 5: carry a small patch adding a target-framebuffer parameter (upstream has it on its to-do list), or render the union domain as framebuffer 0 and crop for the screen with a blit. Decide when a real LED layout exists.
+4. **A cost planner** compares "one union canvas" against "separate canvases per sink". It only pays off when the domains differ hugely, such as a room-wide LED ring plus a 16:9 screen. v1 always uses the union canvas.
 
 Spotlights use the same sampling plus temporal smoothing. LED transports are abstract (DDP / Art-Net / sACN / serial). The Pi 5's RP1 breaks the old `rpi_ws281x` PWM/PCM path, so verify options in Phase 5. The safest route is an ESP32 (WLED) or Pico receiving over UDP or USB.
 
