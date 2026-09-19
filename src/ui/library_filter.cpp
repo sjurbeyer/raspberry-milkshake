@@ -43,6 +43,14 @@ QString LibraryFilter::idAt(int row) const { return data(index(row, 0), LibraryM
 QString LibraryFilter::typeAt(int row) const { return data(index(row, 0), LibraryModel::TypeRole).toString(); }
 QString LibraryFilter::titleAt(int row) const { return data(index(row, 0), LibraryModel::TitleRole).toString(); }
 
+QVariantMap LibraryFilter::get(int row) const {
+  QVariantMap map;
+  const QModelIndex idx = index(row, 0);
+  const QHash<int, QByteArray> names = roleNames();
+  for (auto it = names.begin(); it != names.end(); ++it) map.insert(QString::fromUtf8(it.value()), data(idx, it.key()));
+  return map;
+}
+
 int LibraryFilter::rowOf(const QString& id) const {
   for (int row = 0; row < rowCount(); ++row) {
     if (idAt(row) == id) return row;

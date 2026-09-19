@@ -71,21 +71,72 @@ set_tests_properties(rm_validate_example rm_validate_reports_missing_files
 # Qt touch UI (Qt 6.8 in the dev image, the same series Raspberry Pi OS Trixie ships).
 option(RM_BUILD_UI "Build the Qt touch UI" OFF)
 if(RM_BUILD_UI)
-  find_package(Qt6 6.4 REQUIRED COMPONENTS Core Test)
+  find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick QuickTest Svg Test)
+  set(CMAKE_AUTOMOC ON)  # also needed by qt_add_qml_module for its metatypes
+
   add_library(rm_ui
     src/ui/library_model.cpp
     src/ui/library_filter.cpp
     src/ui/app_controller.cpp
+    src/ui/svg_image_provider.cpp
   )
   set_target_properties(rm_ui PROPERTIES AUTOMOC ON)
   target_include_directories(rm_ui PUBLIC src)
-  target_link_libraries(rm_ui PUBLIC rm_core Qt6::Core)
+  target_link_libraries(rm_ui PUBLIC rm_core Qt6::Core Qt6::Gui Qt6::Quick Qt6::Svg)
   target_compile_options(rm_ui PRIVATE -Wall -Wextra -Wpedantic)
 
-  add_executable(rm_ui_tests tests/ui_model_test.cpp)
+  # The QML module. Shared, so its resources register themselves when the library loads.
+  set(RM_QML_DIR ${CMAKE_SOURCE_DIR}/src/ui/qml)
+  set(RM_BRAND_DIR ${CMAKE_SOURCE_DIR}/docs/raspberry-milkshake-visual-profile/raspberry-milkshake-brand)
+  set(RM_QML_NAMES Theme AppImage LiveDot RmButton RmDropdown CoverArt CoverTile CollectionGrid
+                   CollectionCarousel PlaybackBar HomeScreen)
+  set(RM_QML_FILES)
+  foreach(name IN LISTS RM_QML_NAMES)
+    set_source_files_properties(${RM_QML_DIR}/${name}.qml PROPERTIES QT_RESOURCE_ALIAS ${name}.qml)
+    list(APPEND RM_QML_FILES ${RM_QML_DIR}/${name}.qml)
+  endforeach()
+  set_source_files_properties(${RM_QML_DIR}/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+  set(RM_QML_ASSETS)
+  foreach(asset grid.svg carousel.svg chevron-down.svg)
+    set_source_files_properties(${RM_QML_DIR}/assets/${asset} PROPERTIES QT_RESOURCE_ALIAS assets/${asset})
+    list(APPEND RM_QML_ASSETS ${RM_QML_DIR}/assets/${asset})
+  endforeach()
+  set(RM_MARK ${RM_BRAND_DIR}/assets/logo/raspberry-milkshake-mark.svg)
+  set_source_files_properties(${RM_MARK} PROPERTIES QT_RESOURCE_ALIAS assets/mark.svg)
+  qt_add_qml_module(rm_ui_qml SHARED
+    URI Milkshake
+    VERSION 1.0
+    NO_PLUGIN
+    RESOURCE_PREFIX /qt/qml
+    QML_FILES ${RM_QML_FILES}
+    RESOURCES ${RM_QML_ASSETS} ${RM_MARK}
+  )
+  target_link_libraries(rm_ui_qml PUBLIC Qt6::Quick)
+
+  add_executable(rm-touch-ui src/ui/main.cpp)
+  target_link_libraries(rm-touch-ui PRIVATE rm_ui rm_ui_qml Qt6::Gui Qt6::Quick)
+  # rm_ui_qml only carries resources; without this the linker drops it and the module never registers.
+  target_link_options(rm-touch-ui PRIVATE -Wl,--no-as-needed)
+  target_compile_options(rm-touch-ui PRIVATE -Wall -Wextra -Wpedantic)
+
+  add_executable(rm_ui_tests tests/ui_model_test.cpp tests/ui_theme_test.cpp tests/ui_svg_test.cpp)
   target_link_libraries(rm_ui_tests PRIVATE rm_ui Qt6::Test Catch2::Catch2WithMain)
   target_compile_definitions(rm_ui_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   catch_discover_tests(rm_ui_tests PROPERTIES LABELS ui)
+
+  # QML tests run offscreen with Qt's software renderer, so they need no GPU.
+  add_executable(rm_qml_tests tests/qml/tst_main.cpp)
+  set_target_properties(rm_qml_tests PROPERTIES AUTOMOC ON)
+  target_link_libraries(rm_qml_tests PRIVATE rm_ui rm_ui_qml Qt6::QuickTest Qt6::Quick)
+  target_link_options(rm_qml_tests PRIVATE -Wl,--no-as-needed)
+  target_compile_definitions(rm_qml_tests PRIVATE
+    RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    QUICK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests/qml")
+  add_test(NAME qml_homescreen COMMAND rm_qml_tests)
+  set_tests_properties(qml_homescreen PROPERTIES
+    LABELS ui
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
+  set(CMAKE_AUTOMOC OFF)
 endif()
 
 # projectM host: needs EGL + OpenGL ES 3 (Mesa llvmpipe in the dev container, V3D on the Pi).

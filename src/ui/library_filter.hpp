@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QSortFilterProxyModel>
+#include <QVariantMap>
 
 namespace rm {
 
@@ -23,6 +24,8 @@ class LibraryFilter : public QSortFilterProxyModel {
   Q_INVOKABLE QString idAt(int row) const;
   Q_INVOKABLE QString typeAt(int row) const;
   Q_INVOKABLE QString titleAt(int row) const;
+  // All roles of a row as a map, for QML.
+  Q_INVOKABLE QVariantMap get(int row) const;
   // Row of the collection in the filtered list, or -1 if it is filtered out.
   Q_INVOKABLE int rowOf(const QString& id) const;
 
