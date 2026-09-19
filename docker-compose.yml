@@ -32,6 +32,13 @@ services:
     environment:
       RM_APP_ARGS: ${RM_APP_ARGS:-}
     command: bash tools/dev/run-dashboard.sh
+    # Healthy once the dashboard page answers; the first start builds everything, so allow time.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+      start_period: 20s
 
   # Downloads a community MilkDrop preset pack into the presets volume (once).
   fetch-presets:
