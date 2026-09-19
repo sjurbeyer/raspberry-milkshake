@@ -81,6 +81,7 @@ TEST_CASE("a cue lands on the frame whose audio position reaches it", "[runner]"
   // Frame N covers position N * 800 samples, so the cue at 1.0 s (48000) is applied at frame 60.
   REQUIRE(first_red_frame(runner, h, 120) == 60);
   REQUIRE(runner.errors().empty());
+  REQUIRE(runner.current_preset() == "test-fill.milk");
 }
 
 TEST_CASE("the frame before the cue is still the first preset", "[runner]") {

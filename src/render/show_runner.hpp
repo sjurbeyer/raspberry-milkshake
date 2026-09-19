@@ -48,6 +48,7 @@ class ShowRunner {
   void seek(SamplePos pos);
 
   const std::vector<std::string>& errors() const { return errors_; }
+  const std::string& current_preset() const { return current_preset_; }  // last one that loaded
 
  private:
   bool load(const LoadPreset& event);
@@ -57,6 +58,7 @@ class ShowRunner {
   const IPcmSource& source_;
   RunnerConfig config_;
   std::int64_t next_frame_ = 0;
+  std::string current_preset_;
   std::vector<std::string> errors_;
   std::vector<float> pcm_;
 };

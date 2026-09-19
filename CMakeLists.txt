@@ -87,6 +87,21 @@ if(RM_BUILD_RENDER)
   set(CMAKE_PROJECT_VERSION_MAJOR 4)
   set(CMAKE_PROJECT_VERSION_MINOR 1)
   set(CMAKE_PROJECT_VERSION_PATCH 7)
+  FetchContent_Declare(stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG 2c980bb59875b0d32144a71867fbdebb2f77cd20
+    GIT_SHALLOW TRUE
+    SYSTEM)
+  set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG v0.56.0
+    GIT_SHALLOW TRUE
+    SYSTEM)
+  FetchContent_MakeAvailable(stb httplib)
   FetchContent_MakeAvailable(projectm)
   unset(CMAKE_PROJECT_VERSION)
   unset(CMAKE_PROJECT_VERSION_MAJOR)
@@ -99,12 +114,15 @@ if(RM_BUILD_RENDER)
     src/render/projectm_host.cpp
     src/render/png.cpp
     src/render/show_runner.cpp
+    src/render/downscaler.cpp
+    src/render/jpeg.cpp
   )
   target_include_directories(rm_render PUBLIC src)
+  target_include_directories(rm_render SYSTEM PRIVATE ${stb_SOURCE_DIR})
   target_link_libraries(rm_render PUBLIC rm_core libprojectM::projectM OpenGL::EGL OpenGL::GLES3)
   target_compile_options(rm_render PRIVATE -Wall -Wextra -Wpedantic)
 
-  add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp)
+  add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp)
   target_link_libraries(rm_render_tests PRIVATE rm_render Catch2::Catch2WithMain)
   target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_compile_options(rm_render_tests PRIVATE -Wall -Wextra -Wpedantic)

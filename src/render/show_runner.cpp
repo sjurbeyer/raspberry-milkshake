@@ -8,7 +8,10 @@ ShowRunner::ShowRunner(ProjectMHost& host, Sequencer& sequencer, const IPcmSourc
 
 bool ShowRunner::load(const LoadPreset& event) {
   std::string error;
-  if (host_.load_preset((config_.preset_root / event.preset).string(), event.transition, error)) return true;
+  if (host_.load_preset((config_.preset_root / event.preset).string(), event.transition, error)) {
+    current_preset_ = event.preset;
+    return true;
+  }
   errors_.push_back(error);
   return false;
 }
