@@ -1,0 +1,16 @@
+format = 1
+type   = "playlist"
+title  = "Sunday Mix"
+tags   = ["pleasing"]
+cover  = "cover.jpg"
+preview = { start = "1:00", length = "15s" }
+
+[[track]]
+from  = "night-drive/01-intro.flac"
+title = "Intro (again)"
+bpm   = 122
+
+  [[track.cue]]
+  at = "0:00"
+  pool = "dir:presets/ambient"
+  every = "16 bars"

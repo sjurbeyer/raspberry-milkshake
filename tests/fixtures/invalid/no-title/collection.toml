@@ -1,0 +1,6 @@
+format = 1
+type   = "album"
+cover  = "cover.jpg"
+
+[[track]]
+file = "01.flac"

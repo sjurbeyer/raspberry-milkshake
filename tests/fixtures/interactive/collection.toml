@@ -1,0 +1,6 @@
+format      = 1
+type        = "interactive"
+title       = "Interactive visualization"
+tags        = ["challenging"]
+preset_pool = "tag:reactive"
+preview     = { preset = "presets/flow.milk" }

@@ -1,0 +1,40 @@
+format  = 1
+type    = "album"
+title   = "Night Drive"
+artist  = "Example Artist"
+tags    = ["pleasing", "edm"]
+cover   = "cover.jpg"
+preview = { track = 1, start = "0:45", length = "20s", preset = "presets/flow.milk" }
+
+[defaults]
+transition = "blend:2.0"
+
+[[track]]
+file  = "01-intro.flac"
+title = "Intro"
+bpm   = 122
+
+  [[track.cue]]
+  at = "0:00"
+  preset = "presets/tunnel.milk"
+  transition = "cut"
+
+  [[track.cue]]
+  at = "bar 9"
+  pool = "tag:ambient"
+  every = "8 bars"
+
+[[track]]
+file  = "02-drive.flac"
+title = "Drive"
+bpm   = 128
+downbeat_offset = "0:00.250"
+
+  [[track.cue]]
+  at = "0:00"
+  preset = "presets/flow.milk"
+
+  [[track.cue]]
+  at = "bar 17 beat 3.5"
+  preset = "presets/pulse.milk"
+  transition = "blend:0.5"

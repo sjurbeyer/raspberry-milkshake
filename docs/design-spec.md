@@ -59,7 +59,7 @@ Keyboard (evdev) ─► Controller (interactive)
 ```
 
 - **OS**: Raspberry Pi OS Lite 64-bit (current stable), with no desktop or compositor. Direct ALSA (exclusive), with no PulseAudio or PipeWire, since this is a dedicated appliance.
-- **Stack**: C++20, Qt 6 / QML, CMake, SQLite for the library index.
+- **Stack**: C++23 (GCC 14 on Raspberry Pi OS Trixie), Qt 6 / QML, CMake, SQLite for the library index.
 - **Risk**: the packaged Qt may lack the EGLFS/KMS plugin. Fallback is a custom Qt build.
 - **Risk**: GPU contention. The UI and projectM share one V3D GPU. Keep the UI static when idle and measure UI frame times under heavy presets. Fallback is Qt Quick's software backend for the UI.
 
@@ -98,7 +98,7 @@ This is the only latency-critical path.
 - Performance governor, fan curve check, and `vcgencmd get_throttled` in a debug overlay.
 
 ## 5. Collection format
-A **collection** is a directory with a TOML manifest, hand-editable and validated by the importer. Album, playlist, and interactive share one model via `type`.
+A **collection** is a directory with a TOML manifest, hand-editable and validated by the importer. Album, playlist, and interactive share one model via `type`. The full schema is in [show-format.md](show-format.md); the example below is illustrative.
 
 ```toml
 # collection.toml
@@ -116,7 +116,7 @@ title = "Intro"
 bpm = 122                         # optional, else from analysis
 
   [[track.cue]]
-  at = "0:00.000"                 # or "bar 17", "beat 3.2"
+  at = "0:00.000"                 # or "bar 17", "bar 17 beat 3.5"
   preset = "presets/tunnel.milk"
   transition = "cut"
 
