@@ -39,7 +39,7 @@ std::atomic<bool> g_stop{false};
 void on_signal(int) { g_stop = true; }
 
 struct Options {
-  fs::path collection = "examples/collections/demo-loop";
+  fs::path collection = "examples/dev/demo-loop";
   fs::path presets = "/presets";
   fs::path fallback_presets = "tests/fixtures/presets";
   fs::path web = "web";
