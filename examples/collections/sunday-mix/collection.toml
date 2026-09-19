@@ -1,0 +1,16 @@
+format = 1
+type   = "playlist"
+title  = "Sunday Mix"
+tags   = ["pleasing"]
+cover  = "cover.svg"
+preview = { start = "1:00", length = "15s" }
+
+[[track]]
+from  = "night-drive/01-intro.flac"
+title = "Sunday Mix"
+bpm   = 122
+
+  [[track.cue]]
+  at = "0:00"
+  pool = "all"
+  every = "16 bars"

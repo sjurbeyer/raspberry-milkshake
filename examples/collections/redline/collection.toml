@@ -1,0 +1,17 @@
+format = 1
+type   = "album"
+title  = "Redline"
+artist = "Example Artist"
+tags   = ["edm", "challenging"]
+cover  = "cover.svg"
+preview = { start = "0:30", length = "20s" }
+
+[[track]]
+file  = "01-redline.flac"
+title = "Redline"
+bpm   = 140
+
+  [[track.cue]]
+  at = "0:00"
+  pool = "all"
+  every = "8 bars"

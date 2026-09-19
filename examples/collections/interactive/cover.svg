@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="bg" gradientTransform="rotate(9 .5 .5)"><stop offset="0" stop-color="#2B2B32"/><stop offset="1" stop-color="#18181C"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <path d="M605.0 455.5A108.8 108.8 0 1 1 407.1 540.6" fill="none" stroke="#E84F8C" stroke-opacity="0.66" stroke-width="55.4" stroke-linecap="round"/>
+  <path d="M491.0 369.6A143.9 143.9 0 1 1 378.1 564.6" fill="none" stroke="#F47CA9" stroke-opacity="0.95" stroke-width="52.3" stroke-linecap="round"/>
+  <path d="M492.9 322.7A190.2 190.2 0 1 1 338.5 434.1" fill="none" stroke="#FFB8D2" stroke-opacity="0.91" stroke-width="52.0" stroke-linecap="round"/>
+  <path d="M557.2 768.1A260.1 260.1 0 1 1 609.0 270.7" fill="none" stroke="#F2F3F5" stroke-opacity="0.75" stroke-width="15.0" stroke-linecap="round"/>
+  <path d="M269.2 349.5A292.1 292.1 0 0 1 789.7 602.7" fill="none" stroke="#F2F3F5" stroke-opacity="0.71" stroke-width="15.3" stroke-linecap="round"/>
+  <path d="M481.2 159.4A354.0 354.0 0 0 1 829.6 668.3" fill="none" stroke="#7AA2F7" stroke-opacity="0.61" stroke-width="29.6" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="51" fill="#F2F3F5"/>
+</svg>

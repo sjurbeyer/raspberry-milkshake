@@ -1,0 +1,17 @@
+format = 1
+type   = "album"
+title  = "Deep Field"
+artist = "Example Artist"
+tags   = ["challenging"]
+cover  = "cover.svg"
+preview = { start = "0:30", length = "20s" }
+
+[[track]]
+file  = "01-deep-field.flac"
+title = "Deep Field"
+bpm   = 110
+
+  [[track.cue]]
+  at = "0:00"
+  pool = "all"
+  every = "8 bars"

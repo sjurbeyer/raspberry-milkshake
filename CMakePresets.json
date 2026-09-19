@@ -9,7 +9,8 @@
       "binaryDir": "/build",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "RM_BUILD_RENDER": "ON"
+        "RM_BUILD_RENDER": "ON",
+        "RM_BUILD_UI": "ON"
       }
     }
   ],

@@ -269,7 +269,7 @@ TEST_CASE("check_files reports missing cover and audio", "[manifest]") {
   check_files(*album_result.collection, base / "night-drive", diags);
   REQUIRE(diags.size() == 3);  // cover + two audio files
 
-  touch(base / "night-drive/cover.jpg");
+  touch(base / "night-drive/cover.svg");
   touch(base / "night-drive/01-intro.flac");
   touch(base / "night-drive/02-drive.flac");
   diags.clear();

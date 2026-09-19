@@ -3,7 +3,7 @@ type    = "album"
 title   = "Night Drive"
 artist  = "Example Artist"
 tags    = ["pleasing", "edm"]
-cover   = "cover.jpg"
+cover   = "cover.svg"
 preview = { track = 1, start = "0:45", length = "20s", preset = "presets/flow.milk" }
 
 [defaults]

@@ -68,6 +68,26 @@ set_tests_properties(rm_validate_reports_invalid_manifest PROPERTIES
 set_tests_properties(rm_validate_example rm_validate_reports_missing_files
   rm_validate_reports_invalid_manifest PROPERTIES LABELS unit)
 
+# Qt touch UI (Qt 6.8 in the dev image, the same series Raspberry Pi OS Trixie ships).
+option(RM_BUILD_UI "Build the Qt touch UI" OFF)
+if(RM_BUILD_UI)
+  find_package(Qt6 6.4 REQUIRED COMPONENTS Core Test)
+  add_library(rm_ui
+    src/ui/library_model.cpp
+    src/ui/library_filter.cpp
+    src/ui/app_controller.cpp
+  )
+  set_target_properties(rm_ui PROPERTIES AUTOMOC ON)
+  target_include_directories(rm_ui PUBLIC src)
+  target_link_libraries(rm_ui PUBLIC rm_core Qt6::Core)
+  target_compile_options(rm_ui PRIVATE -Wall -Wextra -Wpedantic)
+
+  add_executable(rm_ui_tests tests/ui_model_test.cpp)
+  target_link_libraries(rm_ui_tests PRIVATE rm_ui Qt6::Test Catch2::Catch2WithMain)
+  target_compile_definitions(rm_ui_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+  catch_discover_tests(rm_ui_tests PROPERTIES LABELS ui)
+endif()
+
 # projectM host: needs EGL + OpenGL ES 3 (Mesa llvmpipe in the dev container, V3D on the Pi).
 option(RM_BUILD_RENDER "Build the projectM host and render tests" OFF)
 if(RM_BUILD_RENDER)

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="bg" gradientTransform="rotate(147 .5 .5)"><stop offset="0" stop-color="#2B2B32"/><stop offset="1" stop-color="#18181C"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <path d="M549.9 427.2A92.9 92.9 0 1 1 432.8 463.4" fill="none" stroke="#F47CA9" stroke-opacity="0.82" stroke-width="58.8" stroke-linecap="round"/>
+  <path d="M375.8 582.6A153.4 153.4 0 0 1 453.4 370.2" fill="none" stroke="#E84F8C" stroke-opacity="0.82" stroke-width="49.1" stroke-linecap="round"/>
+  <path d="M402.8 653.7A178.9 178.9 0 1 1 667.3 600.8" fill="none" stroke="#F2F3F5" stroke-opacity="0.56" stroke-width="26.1" stroke-linecap="round"/>
+  <path d="M665.2 339.5A230.7 230.7 0 1 1 299.7 421.8" fill="none" stroke="#F47CA9" stroke-opacity="1.00" stroke-width="40.1" stroke-linecap="round"/>
+  <path d="M617.3 752.6A262.6 262.6 0 1 1 760.5 596.9" fill="none" stroke="#E84F8C" stroke-opacity="0.85" stroke-width="37.2" stroke-linecap="round"/>
+  <path d="M388.1 798.1A311.7 311.7 0 1 1 821.8 546.8" fill="none" stroke="#7AA2F7" stroke-opacity="0.97" stroke-width="25.4" stroke-linecap="round"/>
+  <path d="M319.0 210.8A357.7 357.7 0 1 1 156.4 551.2" fill="none" stroke="#F2F3F5" stroke-opacity="0.95" stroke-width="28.7" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="52" fill="#F2F3F5"/>
+</svg>

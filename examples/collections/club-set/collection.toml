@@ -1,0 +1,16 @@
+format = 1
+type   = "playlist"
+title  = "Club Set"
+tags   = ["edm", "challenging"]
+cover  = "cover.svg"
+preview = { start = "1:00", length = "15s" }
+
+[[track]]
+from  = "redline/01-redline.flac"
+title = "Club Set"
+bpm   = 122
+
+  [[track.cue]]
+  at = "0:00"
+  pool = "all"
+  every = "16 bars"
