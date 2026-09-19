@@ -2,7 +2,7 @@
 
 Status: draft for iteration. Source notes: `../3D sound setup.md`.
 
-Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots, and a `ShowRunner` that steps the sequencer, the A/V lead and the audio window per frame; tested on llvmpipe) exist (Phase 0a, mostly). Not started: Qt UI, audio backends, sinks, everything on the Pi.
+Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots, and a `ShowRunner` that steps the sequencer, the A/V lead and the audio window per frame; tested on llvmpipe), an LED perimeter layout with a GPU downscale sampling path, and a browser dashboard (main output, LED chain, status; section 13.1) exist (Phase 0a, mostly). Not started: Qt UI and the touch pane, real audio playback and capture, real LED/spotlight transports, everything on the Pi.
 
 ## 0. Goals
 A Raspberry Pi 5 appliance that runs projectM with two modes:
@@ -230,11 +230,13 @@ MVP is Phases 0a–4.
 ### 13.1 Dev container
 Purpose: develop and validate logic, UI, collection format and sync off the Pi, from a Windows host (Docker Desktop, WSL2 backend).
 
-- **Image**: multi-stage Dockerfile (`dev`, `test`, `run` targets) on the same Debian base as Raspberry Pi OS, with Qt 6, pinned projectM, ALSA/ffmpeg dev libs, Mesa (software OpenGL, llvmpipe), Xvfb, x11vnc and noVNC. Build multi-arch (buildx) so the Pi uses the same dependency set.
-- **Compose dashboard** (`docker compose up`, browser at localhost):
-  - **Main output**: a virtual display (1920×1080) shown through noVNC, framed per the brand's projector-output rule (thin neutral line, small raspberry live dot and `LIVE` label).
-  - **Touch UI**: a second virtual display (1280×720) through noVNC. Mouse drag stands in for touch.
-  - **LED chain**: a web page fed by the LED sink's `sim` backend over WebSocket, drawing the strip from the real sink frames. It also works against the real Pi over the network.
+- **Image**: one `dev` image on the same Debian base as Raspberry Pi OS (Trixie), with the build tools and Mesa EGL/GLES (llvmpipe software rendering). projectM is built from source by CMake (pinned v4.1.7). Still to add: Qt 6, ALSA/ffmpeg dev libs, and the VNC/noVNC pieces for the touch pane. Build multi-arch (buildx) later so the Pi uses the same dependency set.
+- **Dashboard** (`docker compose run --rm fetch-presets` once, then `docker compose up dashboard`, browser at http://localhost:8080, bound to this machine only). `rm-devserver` runs a demo collection through the real sequencer and projectM host and serves:
+  - **Main output**: an MJPEG stream of the rendered picture, framed per the brand's projector-output rule (thin neutral line, small raspberry live dot and `LIVE` label). This replaced the planned Xvfb + noVNC pane, which is not needed for a headless render.
+  - **LED chain**: a canvas that draws the chain from the values the real LED sampling path produces (a GPU downscale of the same rendered frame, then `sample_leds`). The layout is a 76-LED perimeter strip for now. The same page can later point at a real Pi.
+  - **Status**: current preset, media time, frame rate and cost, preset count, load errors and the GL renderer.
+  - **Touch UI**: not built yet. It arrives with the Qt slice as a second pane (Qt's VNC platform plugin plus noVNC, so a mouse drag stands in for touch).
+  - The audio is synthetic (kick, hats, pad) until audio playback exists, and the frame rate is fixed at 30 fps in the container.
 - `docker compose run --rm test` builds and runs the suite. `docker compose run --rm dev` opens a shell in the container (source at `/src`, build tree at `/build`). The build tree lives in a named volume so artifacts stay out of the OneDrive-synced folder. In Git Bash on Windows, prefix commands that pass absolute container paths with `MSYS_NO_PATHCONV=1`.
 - Optional: WSLg passthrough for native windows.
 - **Dev profile defaults**: internal resolution 640×360 and a virtual clock, so cue scheduling is exact even if llvmpipe drops frames.

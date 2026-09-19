@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>raspberry milkshake dev dashboard</title>
+<link rel="icon" href="/brand/assets/logo/raspberry-milkshake-mark-dark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/brand/css/raspberry-milkshake.css">
+<link rel="stylesheet" href="/brand/css/raspberry-milkshake-motion.css">
+<style>
+  body { margin: 0; min-height: 100vh; }
+  header { display: flex; align-items: center; gap: var(--rm-gap, 12px); padding: 14px 24px; border-bottom: 1px solid var(--rm-border); }
+  header img { width: 28px; height: 28px; }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  header .muted { color: var(--rm-text-muted); }
+  main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; padding: 16px 24px 32px; align-items: start; }
+  @media (max-width: 1000px) { main { grid-template-columns: minmax(0, 1fr); } }
+  .pane { padding: 12px; }
+  .pane > h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13px; font-weight: 500; color: var(--rm-text-muted); }
+  .live { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--rm-text); font-size: 12px; letter-spacing: .06em; }
+  .stage { position: relative; aspect-ratio: 16 / 9; background: #000; border: 1px solid var(--rm-border); border-radius: 2px; overflow: hidden; }
+  .stage img { width: 100%; height: 100%; display: block; object-fit: contain; }
+  canvas { width: 100%; aspect-ratio: 16 / 9; display: block; background: var(--rm-canvas); border: 1px solid var(--rm-border); border-radius: var(--rm-radius-control); }
+  .col { display: grid; gap: 16px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 12px; }
+  dt { color: var(--rm-text-muted); }
+  dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .warn { color: var(--rm-signal); }
+  .note { margin: 10px 0 0; font-size: 12px; color: var(--rm-text-muted); }
+</style>
+</head>
+<body class="rm-app">
+<header>
+  <img class="rm-logo-vortex" src="/brand/assets/logo/raspberry-milkshake-mark.svg" alt="">
+  <h1>raspberry milkshake</h1>
+  <span class="muted">dev dashboard</span>
+</header>
+<main>
+  <section class="rm-panel pane">
+    <h2>main output <span class="live"><span class="rm-live-dot"></span>LIVE</span></h2>
+    <div class="stage"><img id="main" src="/main.mjpg" alt="main output"></div>
+    <p class="note">The real projector shows the picture edge to edge with nothing drawn over it; this frame is for the dashboard only.</p>
+  </section>
+  <div class="col">
+    <section class="rm-panel pane">
+      <h2>led chain</h2>
+      <canvas id="leds" width="640" height="360"></canvas>
+      <p class="note" id="led-note"></p>
+    </section>
+    <section class="rm-panel pane">
+      <h2>status</h2>
+      <dl>
+        <dt>preset</dt><dd id="s-preset">-</dd>
+        <dt>media time</dt><dd id="s-time">-</dd>
+        <dt>frame rate</dt><dd id="s-fps">-</dd>
+        <dt>frame cost</dt><dd id="s-cost">-</dd>
+        <dt>presets in pool</dt><dd id="s-count">-</dd>
+        <dt>load errors</dt><dd id="s-errors">-</dd>
+        <dt>renderer</dt><dd id="s-renderer">-</dd>
+      </dl>
+    </section>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const getJson = async (url) => (await fetch(url, { cache: 'no-store' })).json();
+
+let points = [];
+
+function drawLeds(hex) {
+  const canvas = $('leds');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // the picture, as the LEDs see it: the chain runs around its edge
+  ctx.strokeStyle = css('--rm-border');
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+  // chain order
+  ctx.strokeStyle = css('--rm-surface-raised');
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach(([u, v], i) => (i ? ctx.lineTo(u * w, v * h) : ctx.moveTo(u * w, v * h)));
+  ctx.stroke();
+
+  const radius = Math.max(5, Math.min(w, h) / 60);
+  points.forEach(([u, v], i) => {
+    const c = hex.slice(i * 6, i * 6 + 6) || '000000';
+    ctx.fillStyle = '#' + c;
+    ctx.beginPath();
+    ctx.arc(u * w, v * h, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = css('--rm-border');
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // the first LED in the chain
+  if (points.length) {
+    ctx.strokeStyle = css('--rm-milk');
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(points[0][0] * w, points[0][1] * h, radius + 4, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+async function ledLoop() {
+  try { drawLeds((await getJson('/leds.json')).hex); } catch (e) { /* server restarting */ }
+  setTimeout(ledLoop, 50);
+}
+
+async function statusLoop() {
+  try {
+    const s = await getJson('/state.json');
+    $('s-preset').textContent = s.preset || '(idle)';
+    $('s-time').textContent = s.media_seconds + ' s';
+    $('s-fps').textContent = s.fps + ' / ' + s.target_fps + ' fps';
+    $('s-cost').textContent = s.render_ms + ' ms per frame (' + s.width + '×' + s.height + ')';
+    $('s-count').textContent = s.preset_count;
+    $('s-errors').textContent = s.errors + (s.last_error ? ' — ' + s.last_error : '');
+    $('s-errors').className = s.errors ? 'warn' : '';
+    $('s-renderer').textContent = s.renderer;
+  } catch (e) { /* server restarting */ }
+  setTimeout(statusLoop, 500);
+}
+
+(async () => {
+  points = (await getJson('/layout.json')).points;
+  $('led-note').textContent = points.length + ' LEDs, clockwise from the top-left corner (ringed).';
+  ledLoop();
+  statusLoop();
+})();
+</script>
+</body>
+</html>

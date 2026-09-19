@@ -1,0 +1,20 @@
+# Used by rm-devserver: presets are picked from whatever pack is mounted at /presets, and the
+# audio is synthetic, so no audio file is needed.
+format = 1
+type   = "album"
+title  = "Demo loop"
+tags   = ["dev"]
+cover  = "cover.jpg"
+
+[defaults]
+transition = "blend:2.0"
+
+[[track]]
+file  = "demo.flac"
+title = "Synthetic groove"
+bpm   = 120
+
+  [[track.cue]]
+  at = "0:00"
+  pool = "all"
+  every = "8 bars"
