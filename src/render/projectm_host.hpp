@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/frame.hpp"
 #include "core/manifest.hpp"
 
 namespace rm {
@@ -15,12 +16,6 @@ struct HostConfig {
   int mesh_width = 32;
   int mesh_height = 24;
   int fps = 60;
-};
-
-struct Frame {
-  int width = 0;
-  int height = 0;
-  std::vector<std::uint8_t> rgba;  // top row first
 };
 
 struct ProjectMHostImpl;

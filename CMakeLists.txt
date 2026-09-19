@@ -24,6 +24,9 @@ add_library(rm_core
   src/core/sequencer.cpp
   src/core/policy.cpp
   src/core/channel_map.cpp
+  src/core/led_layout.cpp
+  src/core/dir_catalog.cpp
+  src/core/demo_audio.cpp
 )
 target_include_directories(rm_core PUBLIC src)
 target_link_libraries(rm_core PUBLIC tomlplusplus::tomlplusplus)
@@ -44,6 +47,9 @@ add_executable(rm_tests
   tests/sequencer_test.cpp
   tests/policy_test.cpp
   tests/channel_map_test.cpp
+  tests/led_layout_test.cpp
+  tests/dir_catalog_test.cpp
+  tests/demo_audio_test.cpp
 )
 target_link_libraries(rm_tests PRIVATE rm_core Catch2::Catch2WithMain)
 target_compile_definitions(rm_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
