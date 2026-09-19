@@ -2,7 +2,7 @@
 
 Status: draft for iteration. The original notes file (`3D sound setup.md`) was superseded by this spec and removed; it is in the git history.
 
-Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots, and a `ShowRunner` that steps the sequencer, the A/V lead and the audio window per frame; tested on llvmpipe), an LED perimeter layout with a GPU downscale sampling path, and a browser dashboard (main output, LED chain, status; section 13.1) exist (Phase 0a, mostly). Not started: Qt UI and the touch pane, real audio playback and capture, real LED/spotlight transports, everything on the Pi.
+Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots, and a `ShowRunner` that steps the sequencer, the A/V lead and the audio window per frame; tested on llvmpipe), an LED perimeter layout with a GPU downscale sampling path, a browser dashboard (main output, touch display, LED chain, status; section 13.1), and the Qt touch UI (`src/ui`, section 6.2) exist (Phase 0a and most of Phase 3). Not started: connecting the touch UI to the engine in one process, real audio playback and capture, real LED/spotlight transports, everything on the Pi.
 
 ## 0. Goals
 A Raspberry Pi 5 appliance that runs projectM with two modes:
@@ -159,6 +159,13 @@ The identity package is in `docs/raspberry-milkshake-visual-profile/raspberry-mi
 - **Live indicator**: the projected output is a boundaryless stage, so nothing is drawn over it by default. The brand's thin frame with a raspberry live dot and `LIVE` label appears around the main-output pane of the dev dashboard and in the touch UI's playback bar.
 - **Open**: `BRAND.md` recommends sine easing while the CSS and tokens use the `ease-liquid` quint-out curve, and the tokens file has no easing token. This spec follows the CSS curve until the profile is reconciled.
 
+### 6.2 Implementation (as built)
+- **C++ model layer** (`src/ui`, no QML dependency): `LibraryModel` scans a folder of collections (interactive first, then alphabetical; broken manifests are skipped and reported), `LibraryFilter` applies the type and tag dropdowns, and `AppController` wraps the core play queue and browse rules and emits `previewRequested`, `previewStopped`, `playRequested` and `stopped` for the engine to act on.
+- **QML module `Milkshake`** (`src/ui/qml`): `HomeScreen` (top bar, grid, swipe carousel, playback bar, empty state) built from `CoverTile`, `CollectionGrid`, `CollectionCarousel`, `PlaybackBar`, `RmButton`, `RmDropdown`, `CoverArt`, `LiveDot` and the `Theme` singleton. Previews start after 250 ms of stillness in the swipe view, and only while idle.
+- **SVG**: this Debian build ships no Qt SVG image-format plugin, so SVGs (covers, icons, the mark) load through an app-owned `image://svg/` provider that draws with `QSvgRenderer`. That keeps the UI independent of which plugins a distribution packages.
+- **Tests**: the model layer, controller and theme-versus-tokens check run as Catch2 tests, and 20 Qt Quick Test cases drive the real UI offscreen with simulated mouse input (filters, swipe, preview and queue rules). `rm-touch-ui --screenshot <file> [--view swipe] [--select <id>] [--play <id>]` renders a state offscreen for a visual check.
+- **Known gaps**: the swipe view has no page indicator, the grid has no keyboard focus handling (touch only, by design), and the controller does not play anything yet.
+
 ## 7. Output sinks: compute once
 MilkDrop is a feedback system: each frame warps the previous frame. Evaluating only at LED locations therefore does not work, because the full field must be simulated at some resolution. The savings come from three other places:
 
@@ -230,12 +237,12 @@ MVP is Phases 0a–4.
 ### 13.1 Dev container
 Purpose: develop and validate logic, UI, collection format and sync off the Pi, from a Windows host (Docker Desktop, WSL2 backend).
 
-- **Image**: one `dev` image on the same Debian base as Raspberry Pi OS (Trixie), with the build tools and Mesa EGL/GLES (llvmpipe software rendering). projectM is built from source by CMake (pinned v4.1.7). Still to add: Qt 6, ALSA/ffmpeg dev libs, and the VNC/noVNC pieces for the touch pane. Build multi-arch (buildx) later so the Pi uses the same dependency set.
+- **Image**: one `dev` image on the same Debian base as Raspberry Pi OS (Trixie), with the build tools and Mesa EGL/GLES (llvmpipe software rendering). projectM is built from source by CMake (pinned v4.1.7). Qt 6.8 (the same series Raspberry Pi OS Trixie ships), noVNC/websockify and the Inter font are in the image too. Still to add: ALSA/ffmpeg dev libs. Build multi-arch (buildx) later so the Pi uses the same dependency set.
 - **Dashboard** (`docker compose run --rm fetch-presets` once, then `docker compose up dashboard`, browser at http://localhost:8080, bound to this machine only). `rm-devserver` runs a demo collection through the real sequencer and projectM host and serves:
   - **Main output**: an MJPEG stream of the rendered picture, framed per the brand's projector-output rule (thin neutral line, small raspberry live dot and `LIVE` label). This replaced the planned Xvfb + noVNC pane, which is not needed for a headless render.
   - **LED chain**: a canvas that draws the chain from the values the real LED sampling path produces (a GPU downscale of the same rendered frame, then `sample_leds`). The layout is a 76-LED perimeter strip for now. The same page can later point at a real Pi.
   - **Status**: current preset, media time, frame rate and cost, preset count, load errors and the GL renderer.
-  - **Touch UI**: not built yet. It arrives with the Qt slice as a second pane (Qt's VNC platform plugin plus noVNC, so a mouse drag stands in for touch).
+  - **Touch display**: the real Qt touch UI (`rm-touch-ui`) on Qt's VNC platform plugin with the software renderer, shown through websockify + noVNC on port 6080 (also bound to this machine only). A mouse drag stands in for touch. The launcher (`tools/dev/run-dashboard.sh`) restarts the UI if it exits. It does not drive the main output yet: that arrives when the UI and the engine run in one process.
   - The audio is synthetic (kick, hats, pad) until audio playback exists, and the frame rate is fixed at 30 fps in the container.
 - `docker compose run --rm test` builds and runs the suite. `docker compose run --rm dev` opens a shell in the container (source at `/src`, build tree at `/build`). The build tree lives in a named volume so artifacts stay out of the OneDrive-synced folder. In Git Bash on Windows, prefix commands that pass absolute container paths with `MSYS_NO_PATHCONV=1`.
 - Optional: WSLg passthrough for native windows.

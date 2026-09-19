@@ -22,6 +22,8 @@
   .stage img { width: 100%; height: 100%; display: block; object-fit: contain; }
   canvas { width: 100%; aspect-ratio: 16 / 9; display: block; background: var(--rm-canvas); border: 1px solid var(--rm-border); border-radius: var(--rm-radius-control); }
   .col { display: grid; gap: 16px; }
+  .stack { display: grid; gap: 16px; }
+  iframe.touch { width: 100%; aspect-ratio: 16 / 9; display: block; border: 1px solid var(--rm-border); border-radius: 2px; background: var(--rm-canvas); }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 12px; }
   dt { color: var(--rm-text-muted); }
   dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
@@ -36,11 +38,18 @@
   <span class="muted">dev dashboard</span>
 </header>
 <main>
+  <div class="stack">
   <section class="rm-panel pane">
     <h2>main output <span class="live"><span class="rm-live-dot"></span>LIVE</span></h2>
     <div class="stage"><img id="main" src="/main.mjpg" alt="main output"></div>
     <p class="note">The real projector shows the picture edge to edge with nothing drawn over it; this frame is for the dashboard only.</p>
   </section>
+  <section class="rm-panel pane">
+    <h2>touch display</h2>
+    <iframe id="touch" class="touch" title="touch display"></iframe>
+    <p class="note">The real touch UI, shown through VNC. Drag with the mouse to swipe. It does not drive the main output yet: that arrives when the UI and the engine run in one process.</p>
+  </section>
+  </div>
   <div class="col">
     <section class="rm-panel pane">
       <h2>led chain</h2>
@@ -127,6 +136,8 @@ async function statusLoop() {
   } catch (e) { /* server restarting */ }
   setTimeout(statusLoop, 500);
 }
+
+$('touch').src = 'http://' + location.hostname + ':6080/vnc.html?autoconnect=true&resize=scale&reconnect=true&show_dot=true';
 
 (async () => {
   points = (await getJson('/layout.json')).points;

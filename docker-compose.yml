@@ -18,19 +18,18 @@ services:
       && cmake --build --preset container
       && ctest --preset container"
 
-  # Browser dashboard: main output, LED chain and status at http://localhost:8080
+  # Browser dashboard at http://localhost:8080: main output, touch display (via noVNC on 6080),
+  # LED chain and status.
   dashboard:
     extends:
       service: dev
     ports:
       # Bound to this machine only.
       - "127.0.0.1:8080:8080"
+      - "127.0.0.1:6080:6080"
     volumes:
       - presets:/presets
-    command: >
-      bash -c "cmake --preset container
-      && cmake --build --preset container --target rm-devserver
-      && /build/rm-devserver --presets /presets"
+    command: bash tools/dev/run-dashboard.sh
 
   # Downloads a community MilkDrop preset pack into the presets volume (once).
   fetch-presets:
