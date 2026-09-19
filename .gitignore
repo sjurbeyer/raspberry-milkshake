@@ -1,0 +1,24 @@
+# Build output
+build/
+build-*/
+cmake-build-*/
+CMakeUserPresets.json
+
+# Test artifacts
+Testing/
+test-output/
+*.profraw
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local config and secrets
+.env
+*.local
+
+# Runtime data (library, shader cache)
+/data/
