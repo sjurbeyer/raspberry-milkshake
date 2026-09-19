@@ -77,7 +77,7 @@ All times are stored as sample positions at 48 kHz, so scheduling is sample-accu
 `"cut"` or `"blend:<seconds>"`, where seconds is in (0, 60].
 
 ### Pool expressions
-`"all"`, `"tag:<name>"` (presets tagged by `rm-bench`), or `"dir:<relative dir>"`. Selection is deterministic for a given `seed` and never repeats the previous choice when the pool has more than one preset.
+`"all"`, `"tag:<name>"` (presets tagged by `rm-bench`), or `"dir:<relative dir>"`. Selection is deterministic for a given `seed` and never repeats the previous choice when the pool has more than one preset. Presets rated 0 (`fRating=0` in the `.milk` file) are never in a pool, so a show's random choices change when a preset is hidden. A preset named directly in `preset = "..."` always plays, whatever its rating.
 
 ## Preview
 The preview plays while browsing in the swipe view, but only when nothing else is playing.

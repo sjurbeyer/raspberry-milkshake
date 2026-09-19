@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 #include "core/cue_time.hpp"
@@ -60,7 +61,7 @@ Collection interactive_show(const Collection& base) {
 }
 
 struct Command {
-  enum class Kind { Preview, StopPreview, Play, Stop };
+  enum class Kind { Preview, StopPreview, Play, Stop, Refresh };
   Kind kind = Kind::Stop;
   std::string id;
   Collection collection;
@@ -78,6 +79,7 @@ struct Engine::Impl {
     SamplePos length = 0;
     SamplePos loop_start = 0;
     SamplePos loop_end = 0;  // 0: no loop
+    SamplePos media_pos = 0;  // where the last rendered frame was
     std::unique_ptr<SyntheticSource> source;
     std::unique_ptr<Sequencer> sequencer;
     std::unique_ptr<ShowRunner> runner;
@@ -102,7 +104,8 @@ struct Engine::Impl {
     load_idle();
   }
 
-  void start_track(std::size_t index) {
+  // Starts a track; `from` is the position to start at (a preview starts at its window start).
+  void start_track(std::size_t index, std::optional<SamplePos> from = std::nullopt) {
     Active& a = *active;
     if (a.runner) {
       a.errors_before += a.runner->errors().size();
@@ -114,7 +117,8 @@ struct Engine::Impl {
     a.sequencer = std::make_unique<Sequencer>(a.show, index, a.length, catalog);
     a.runner = std::make_unique<ShowRunner>(host, *a.sequencer, *a.source,
                                             RunnerConfig{config.fps, 0, 512, config.preset_root});
-    if (a.preview && a.loop_start > 0) a.runner->seek(a.loop_start);
+    const SamplePos start = from.value_or(a.preview ? a.loop_start : 0);
+    if (start > 0) a.runner->seek(start);
   }
 
   void begin_preview(std::string id, const Collection& c) {
@@ -171,6 +175,11 @@ struct Engine::Impl {
         break;
       case Command::Kind::Stop:
         go_idle();
+        break;
+      case Command::Kind::Refresh:
+        // Rebuild the schedule of the current track (pool choices depend on the catalog) and carry on
+        // from the same position.
+        if (active) start_track(active->track, active->media_pos);
         break;
     }
   }
@@ -231,6 +240,11 @@ void Engine::stop() {
   impl_->commands.push_back({Command::Kind::Stop, {}, {}});
 }
 
+void Engine::refresh_schedule() {
+  std::lock_guard lock(impl_->mutex);
+  impl_->commands.push_back({Command::Kind::Refresh, {}, {}});
+}
+
 void Engine::set_finished_callback(std::function<void()> callback) {
   std::lock_guard lock(impl_->mutex);
   impl_->finished_callback = std::move(callback);
@@ -261,6 +275,7 @@ void Engine::tick() {
 
   Impl::Active& a = *s.active;
   const auto step = a.runner->step();
+  a.media_pos = step.media_pos;
 
   if (a.preview) {
     if (a.loop_end > 0 && step.media_pos >= a.loop_end) a.runner->seek(a.loop_start);

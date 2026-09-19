@@ -48,6 +48,10 @@ restart:
 presets:
     docker compose run --rm fetch-presets
 
+# List the presets rated 0 (hidden from random picks); change a rating with the buttons on the dashboard
+hidden-presets:
+    docker compose run --rm dev bash tools/dev/list-hidden-presets.sh
+
 # Build and run every test
 test:
     docker compose run --rm test

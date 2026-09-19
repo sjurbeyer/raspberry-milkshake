@@ -54,6 +54,9 @@ class Engine {
   // Interrupts whatever is running.
   void play(std::string id, Collection collection);
   void stop();
+  // Re-plans the current track from the catalog as it is now, carrying on from the same position.
+  // Use after a rating change: pool choices are made up front, so they must be redone.
+  void refresh_schedule();
 
   // Called on the render thread when the last track of a playing collection ends.
   void set_finished_callback(std::function<void()> callback);

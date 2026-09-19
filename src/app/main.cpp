@@ -66,10 +66,14 @@ std::string layout_json(const rm::LedLayout& layout) {
 }
 
 std::string status_json(const rm::EngineStatus& s, const RenderSettings& r, const std::string& renderer,
-                        std::size_t preset_count, std::size_t led_count, double fps, double render_ms) {
-  char numbers[200];
-  std::snprintf(numbers, sizeof numbers, "\"media_seconds\":%.2f,\"fps\":%.1f,\"render_ms\":%.1f", s.media_seconds,
-                fps, render_ms);
+                        const rm::DirCatalog& catalog, std::size_t led_count, double fps, double render_ms) {
+  // -1 when the preset is not in the catalog (for example an explicit cue outside the preset folder).
+  const double rating = catalog.rating(s.preset).value_or(-1.0);
+  const std::size_t preset_count = catalog.size();
+  char numbers[240];
+  std::snprintf(numbers, sizeof numbers,
+                "\"media_seconds\":%.2f,\"fps\":%.1f,\"render_ms\":%.1f,\"rating\":%.0f,\"hidden_presets\":%zu",
+                s.media_seconds, fps, render_ms, rating, catalog.hidden_count());
   std::ostringstream out;
   out << "{\"mode\":\"" << mode_name(s.mode) << "\",\"id\":\"" << rm::json_escape(s.id) << "\",\"title\":\""
       << rm::json_escape(s.title) << "\",\"track\":" << s.track << ",\"track_count\":" << s.track_count
@@ -81,8 +85,9 @@ std::string status_json(const rm::EngineStatus& s, const RenderSettings& r, cons
 }
 
 // Owns the projectM context and the engine; runs until `stop` is set.
-void render_thread(const RenderSettings& settings, rm::DashboardServer& dashboard, const rm::LedLayout& layout,
-                   std::promise<rm::Engine*> ready, const std::atomic<bool>& stop) {
+void render_thread(const RenderSettings& settings, const rm::DirCatalog& catalog, const fs::path& preset_root,
+                   rm::DashboardServer& dashboard, const rm::LedLayout& layout, std::promise<rm::Engine*> ready,
+                   const std::atomic<bool>& stop) {
   std::string error;
   auto egl = rm::EglContext::create_headless(settings.width, settings.height, error);
   if (!egl) {
@@ -96,16 +101,6 @@ void render_thread(const RenderSettings& settings, rm::DashboardServer& dashboar
     ready.set_value(nullptr);
     return;
   }
-
-  fs::path preset_root = settings.presets;
-  rm::DirCatalog catalog(preset_root);
-  if (catalog.size() == 0) {
-    qWarning().noquote() << "no .milk presets under" << QString::fromStdString(preset_root.string())
-                         << "- using the small built-in test presets. Run `docker compose run --rm fetch-presets`.";
-    preset_root = settings.fallback_presets;
-    catalog = rm::DirCatalog(preset_root);
-  }
-  qInfo().noquote() << catalog.size() << "presets from" << QString::fromStdString(preset_root.string());
 
   rm::Downscaler scaler(64, 36);
   rm::EngineConfig config;
@@ -150,8 +145,8 @@ void render_thread(const RenderSettings& settings, rm::DashboardServer& dashboar
       hex += buf;
     }
     dashboard.publish(std::move(jpeg), "{\"hex\":\"" + hex + "\"}",
-                      status_json(status, settings, egl->renderer(), catalog.size(), colors.size(),
-                                  fps_smoothed, render_ms));
+                      status_json(status, settings, egl->renderer(), catalog, colors.size(), fps_smoothed,
+                                  render_ms));
 
     next += period;
     if (done < next) std::this_thread::sleep_until(next);
@@ -199,6 +194,18 @@ int main(int argc, char** argv) {
   filter.setSourceModel(&model);
   rm::AppController controller(&model);
 
+  // The presets. The catalog is shared with the dashboard's rating endpoint, so it lives here.
+  fs::path preset_root = settings.presets;
+  rm::DirCatalog catalog(preset_root);
+  if (catalog.size() == 0) {
+    qWarning().noquote() << "no .milk presets under" << QString::fromStdString(preset_root.string())
+                         << "- using the small built-in test presets. Run `just presets`.";
+    preset_root = settings.fallback_presets;
+    catalog = rm::DirCatalog(preset_root);
+  }
+  qInfo().noquote() << catalog.size() << "presets from" << QString::fromStdString(preset_root.string()) << "("
+                    << catalog.hidden_count() << "rated 0, hidden from random picks)";
+
   // The main output: dashboard server plus the render thread with the engine.
   const rm::LedLayout layout = rm::perimeter_layout(24, 14, 24, 14, 0.08f);
   rm::DashboardOptions dashboard_options;
@@ -210,8 +217,8 @@ int main(int argc, char** argv) {
   std::atomic<bool> stop{false};
   std::promise<rm::Engine*> ready;
   std::future<rm::Engine*> engine_future = ready.get_future();
-  std::thread renderer(render_thread, std::cref(settings), std::ref(dashboard), std::cref(layout), std::move(ready),
-                       std::cref(stop));
+  std::thread renderer(render_thread, std::cref(settings), std::cref(catalog), std::cref(preset_root),
+                       std::ref(dashboard), std::cref(layout), std::move(ready), std::cref(stop));
   rm::Engine* engine = engine_future.get();
   if (!engine) {
     stop = true;
@@ -219,6 +226,19 @@ int main(int argc, char** argv) {
     return 1;
   }
   auto bridge = std::make_unique<rm::EngineBridge>(&controller, &model, engine);
+
+  // Rating a preset from the dashboard: write it into the preset file, then re-plan the current track
+  // so a preset rated 0 goes away now. Runs on an HTTP thread; both calls are thread-safe.
+  dashboard.set_rating_handler([&catalog, engine](const std::string& preset, int rating) {
+    std::string error;
+    if (!catalog.set_rating(preset, rating, &error)) {
+      qWarning().noquote() << "could not rate" << QString::fromStdString(preset) << ":" << QString::fromStdString(error);
+      return false;
+    }
+    qInfo().noquote() << "rated" << QString::fromStdString(preset) << rating;
+    engine->refresh_schedule();
+    return true;
+  });
 
   QObject::connect(&controller, &rm::AppController::previewRequested,
                    [](const QString& id) { qInfo().noquote() << "preview:" << id; });
@@ -243,9 +263,11 @@ int main(int argc, char** argv) {
     qCritical() << "could not load the home screen";
   }
 
-  bridge.reset();  // it points at the engine, which goes away with the render thread
+  // Stop everything that points at the engine before the render thread (and the engine) goes away.
+  bridge.reset();
+  dashboard.set_rating_handler({});
+  dashboard.stop();
   stop = true;
   renderer.join();
-  dashboard.stop();
   return exit_code;
 }

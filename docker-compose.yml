@@ -9,6 +9,7 @@ services:
       - .:/src
       # Build tree lives in a named volume so artifacts never land in the (OneDrive-synced) repo folder.
       - build:/build
+      - presets:/presets
 
   test:
     extends:

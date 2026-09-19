@@ -27,6 +27,7 @@ add_library(rm_core
   src/core/led_layout.cpp
   src/core/dir_catalog.cpp
   src/core/demo_audio.cpp
+  src/core/preset_rating.cpp
 )
 target_include_directories(rm_core PUBLIC src)
 target_link_libraries(rm_core PUBLIC tomlplusplus::tomlplusplus)
@@ -50,6 +51,8 @@ add_executable(rm_tests
   tests/led_layout_test.cpp
   tests/dir_catalog_test.cpp
   tests/demo_audio_test.cpp
+  tests/preset_rating_test.cpp
+  tests/dir_catalog_rating_test.cpp
 )
 target_link_libraries(rm_tests PRIVATE rm_core Catch2::Catch2WithMain)
 target_compile_definitions(rm_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -197,8 +200,9 @@ if(RM_BUILD_RENDER)
                         PRIVATE httplib::httplib Threads::Threads)
   target_compile_options(rm_render PRIVATE -Wall -Wextra -Wpedantic)
 
-  add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp tests/engine_test.cpp)
-  target_link_libraries(rm_render_tests PRIVATE rm_render Catch2::Catch2WithMain)
+  add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp tests/engine_test.cpp
+    tests/engine_rating_test.cpp tests/dashboard_server_test.cpp)
+  target_link_libraries(rm_render_tests PRIVATE rm_render httplib::httplib Threads::Threads Catch2::Catch2WithMain)
   target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_compile_options(rm_render_tests PRIVATE -Wall -Wextra -Wpedantic)
   catch_discover_tests(rm_render_tests TEST_SPEC "~[.]" PROPERTIES LABELS render)

@@ -3,6 +3,7 @@
 #include <httplib.h>
 
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
@@ -42,6 +43,7 @@ struct DashboardServer::Impl {
   std::string leds_json = "{\"hex\":\"\"}";
   std::string state_json = "{}";
   std::string layout_json;
+  RatingHandler rating_handler;  // guarded by mutex
 };
 
 DashboardServer::DashboardServer(DashboardOptions options, std::string layout_json) : impl_(std::make_unique<Impl>()) {
@@ -62,6 +64,24 @@ DashboardServer::DashboardServer(DashboardOptions options, std::string layout_js
   json_route("/layout.json", &Impl::layout_json);
   json_route("/leds.json", &Impl::leds_json);
   json_route("/state.json", &Impl::state_json);
+
+  s.server.Post("/rate", [&s](const httplib::Request& req, httplib::Response& res) {
+    res.set_header("Cache-Control", "no-store");
+    const std::string preset = req.get_param_value("preset");
+    const std::string text = req.get_param_value("rating");
+    int rating = -1;
+    const auto parsed = std::from_chars(text.data(), text.data() + text.size(), rating);
+    RatingHandler handler;
+    {
+      std::lock_guard lock(s.mutex);
+      handler = s.rating_handler;
+    }
+    const bool valid = !preset.empty() && parsed.ec == std::errc{} && parsed.ptr == text.data() + text.size() &&
+                       rating >= 0 && rating <= 5;
+    const bool ok = valid && handler && handler(preset, rating);
+    res.status = ok ? 200 : 400;
+    res.set_content(ok ? "{\"ok\":true}" : "{\"ok\":false}", "application/json");
+  });
 
   s.server.Get("/frame.jpg", [&s](const httplib::Request&, httplib::Response& res) {
     std::lock_guard lock(s.mutex);
@@ -104,6 +124,11 @@ void DashboardServer::stop() {
   s.cv.notify_all();
   s.server.stop();
   if (s.thread.joinable()) s.thread.join();
+}
+
+void DashboardServer::set_rating_handler(RatingHandler handler) {
+  std::lock_guard lock(impl_->mutex);
+  impl_->rating_handler = std::move(handler);
 }
 
 void DashboardServer::publish(std::vector<std::uint8_t> jpeg, std::string leds_json, std::string state_json) {

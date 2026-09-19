@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -31,6 +32,11 @@ class DashboardServer {
   void stop();
 
   void publish(std::vector<std::uint8_t> jpeg, std::string leds_json, std::string state_json);
+
+  // POST /rate?preset=<name>&rating=<0-5> calls this (from an HTTP thread); it returns whether the
+  // rating was applied. Pass an empty function to disable the endpoint.
+  using RatingHandler = std::function<bool(const std::string& preset, int rating)>;
+  void set_rating_handler(RatingHandler handler);
 
  private:
   struct Impl;

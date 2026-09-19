@@ -28,6 +28,10 @@
   dt { color: var(--rm-text-muted); }
   dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
   .warn { color: var(--rm-signal); }
+  .rate { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .rate button { width: 32px; height: 28px; padding: 0; font: inherit; cursor: pointer; }
+  .rate button:disabled { opacity: .4; cursor: default; }
+  .rate .hint { color: var(--rm-text-muted); margin-left: 6px; }
   .note { margin: 10px 0 0; font-size: 12px; color: var(--rm-text-muted); }
 </style>
 </head>
@@ -62,6 +66,8 @@
         <dt>main output</dt><dd id="s-mode">-</dd>
         <dt>collection</dt><dd id="s-now">-</dd>
         <dt>preset</dt><dd id="s-preset">-</dd>
+        <dt>rating</dt><dd><div class="rate" id="rate"></div></dd>
+        <dt>hidden presets</dt><dd id="s-hidden">-</dd>
         <dt>media time</dt><dd id="s-time">-</dd>
         <dt>frame rate</dt><dd id="s-fps">-</dd>
         <dt>frame cost</dt><dd id="s-cost">-</dd>
@@ -124,12 +130,41 @@ async function ledLoop() {
   setTimeout(ledLoop, 50);
 }
 
+const rateBox = $('rate');
+let ratedPreset = null;
+for (let r = 0; r <= 5; r++) {
+  const b = document.createElement('button');
+  b.className = 'rm-control';
+  b.textContent = r;
+  b.title = r === 0 ? 'never show this preset at random' : 'rating ' + r;
+  b.onclick = async () => {
+    if (!ratedPreset) return;
+    const res = await fetch('/rate', { method: 'POST', body: new URLSearchParams({ preset: ratedPreset, rating: r }) });
+    hint.textContent = res.ok ? (r === 0 ? 'hidden and skipped' : 'saved') : 'could not save';
+  };
+  rateBox.appendChild(b);
+}
+const hint = document.createElement('span');
+hint.className = 'hint';
+rateBox.appendChild(hint);
+
+function showRating(s) {
+  ratedPreset = s.rating >= 0 ? s.preset : null;
+  [...rateBox.querySelectorAll('button')].forEach((b, i) => {
+    b.disabled = !ratedPreset;
+    b.setAttribute('aria-pressed', ratedPreset && i === s.rating ? 'true' : 'false');
+  });
+  if (!ratedPreset) hint.textContent = s.preset ? 'not in the preset folder' : '';
+}
+
 async function statusLoop() {
   try {
     const s = await getJson('/state.json');
     $('s-mode').textContent = s.mode;
     $('s-now').textContent = s.title ? s.title + (s.track_count > 1 ? ' (track ' + s.track + ' of ' + s.track_count + ')' : '') : '-';
     $('s-preset').textContent = s.preset || '-';
+    showRating(s);
+    $('s-hidden').textContent = s.hidden_presets + ' (rated 0)';
     $('s-time').textContent = s.media_seconds + ' s';
     $('s-fps').textContent = s.fps + ' / ' + s.target_fps + ' fps';
     $('s-cost').textContent = s.render_ms + ' ms per frame (' + s.width + '×' + s.height + ')';
