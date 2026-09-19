@@ -1,6 +1,6 @@
 # Raspberry Milkshake: Design Spec (v0.1, draft)
 
-Status: draft for iteration. Source notes: `../3D sound setup.md`.
+Status: draft for iteration. The original notes file (`3D sound setup.md`) was superseded by this spec and removed; it is in the git history.
 
 Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots, and a `ShowRunner` that steps the sequencer, the A/V lead and the audio window per frame; tested on llvmpipe), an LED perimeter layout with a GPU downscale sampling path, and a browser dashboard (main output, LED chain, status; section 13.1) exist (Phase 0a, mostly). Not started: Qt UI and the touch pane, real audio playback and capture, real LED/spotlight transports, everything on the Pi.
 
