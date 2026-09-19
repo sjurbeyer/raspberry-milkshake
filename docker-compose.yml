@@ -1,0 +1,22 @@
+services:
+  dev:
+    build:
+      context: .
+      target: dev
+    image: raspberry-milkshake-dev
+    working_dir: /src
+    volumes:
+      - .:/src
+      # Build tree lives in a named volume so artifacts never land in the (OneDrive-synced) repo folder.
+      - build:/build
+
+  test:
+    extends:
+      service: dev
+    command: >
+      bash -c "cmake --preset container
+      && cmake --build --preset container
+      && ctest --preset container"
+
+volumes:
+  build:
