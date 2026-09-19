@@ -187,6 +187,7 @@ if(RM_BUILD_RENDER)
     src/render/show_runner.cpp
     src/render/downscaler.cpp
     src/render/jpeg.cpp
+    src/render/engine.cpp
   )
   target_include_directories(rm_render PUBLIC src)
   target_include_directories(rm_render SYSTEM PRIVATE ${stb_SOURCE_DIR})
@@ -198,7 +199,7 @@ if(RM_BUILD_RENDER)
   target_link_libraries(rm-devserver PRIVATE rm_render httplib::httplib Threads::Threads)
   target_compile_options(rm-devserver PRIVATE -Wall -Wextra -Wpedantic)
 
-  add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp)
+  add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp tests/engine_test.cpp)
   target_link_libraries(rm_render_tests PRIVATE rm_render Catch2::Catch2WithMain)
   target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_compile_options(rm_render_tests PRIVATE -Wall -Wextra -Wpedantic)
