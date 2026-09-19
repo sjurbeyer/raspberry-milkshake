@@ -1,6 +1,6 @@
 import QtQuick
 
-// One collection in the grid: cover, title and type.
+// One collection in the grid: cover, title (up to two lines) and type.
 Item {
     id: root
     property string collectionId: ""
@@ -11,38 +11,41 @@ Item {
     signal tapped()
 
     width: coverSize
-    height: coverSize + 84
+    height: column.height
 
     scale: mouse.pressed ? 0.97 : 1.0
     Behavior on scale {
         NumberAnimation { duration: Theme.durationFast; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easingCurve }
     }
 
-    CoverArt {
-        id: art
-        size: root.coverSize
-        source: root.cover
-    }
-    Text {
-        anchors.top: art.bottom
-        anchors.topMargin: Theme.space3
-        width: root.coverSize
-        text: root.title
-        elide: Text.ElideRight
-        color: Theme.text
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontControl
-        font.weight: Font.Medium
-    }
-    Text {
-        anchors.top: art.bottom
-        anchors.topMargin: Theme.space3 + 32
-        width: root.coverSize
-        text: root.collectionType
-        elide: Text.ElideRight
-        color: Theme.textMuted
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontMeta
+    Column {
+        id: column
+        spacing: Theme.space2
+
+        CoverArt {
+            size: root.coverSize
+            source: root.cover
+        }
+        Text {
+            width: root.coverSize
+            topPadding: Theme.space1
+            text: root.title
+            wrapMode: Text.WordWrap
+            maximumLineCount: 2
+            elide: Text.ElideRight
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontControl
+            font.weight: Font.Medium
+        }
+        Text {
+            width: root.coverSize
+            text: root.collectionType
+            elide: Text.ElideRight
+            color: Theme.textMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontMeta
+        }
     }
 
     MouseArea {

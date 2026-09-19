@@ -6,22 +6,28 @@ GridView {
     signal opened(int row)
 
     readonly property int columns: 5
-    cellWidth: 232
-    cellHeight: 300
-    leftMargin: Math.max(0, (width - columns * cellWidth) / 2)
-    topMargin: Theme.space4
-    bottomMargin: Theme.space4
+    cellWidth: width / columns
+    cellHeight: 324
+    topMargin: Theme.space2
+    bottomMargin: Theme.space2
     clip: true
     cacheBuffer: cellHeight * 2
     boundsBehavior: Flickable.StopAtBounds
 
-    delegate: CoverTile {
-        required property int index
-        required property string collectionId
-        required property string title
-        required property string collectionType
-        required property url cover
-        objectName: "tile-" + collectionId
-        onTapped: grid.opened(index)
+    delegate: Item {
+        id: cell
+        required property var model
+        width: grid.cellWidth
+        height: grid.cellHeight
+
+        CoverTile {
+            objectName: "tile-" + cell.model.collectionId
+            anchors.horizontalCenter: parent.horizontalCenter
+            collectionId: cell.model.collectionId
+            title: cell.model.title
+            collectionType: cell.model.collectionType
+            cover: cell.model.cover
+            onTapped: grid.opened(cell.model.index)
+        }
     }
 }

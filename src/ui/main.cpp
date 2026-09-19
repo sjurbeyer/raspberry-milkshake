@@ -3,6 +3,9 @@
 
 #include <QCommandLineParser>
 #include <QGuiApplication>
+#include <QImage>
+#include <QTimer>
+#include <QQuickItem>
 #include <QQuickView>
 #include <QtDebug>
 
@@ -20,6 +23,11 @@ int main(int argc, char** argv) {
   const QCommandLineOption library_option("library", "Folder holding the collections.", "dir",
                                           "examples/collections");
   parser.addOption(library_option);
+  const QCommandLineOption screenshot_option("screenshot", "Save a screenshot of the window to <file> and exit.", "file");
+  const QCommandLineOption view_option("view", "Start in the grid or swipe view.", "view");
+  const QCommandLineOption select_option("select", "Open this collection id in the swipe view.", "id");
+  const QCommandLineOption play_option("play", "Start playing this collection id.", "id");
+  parser.addOptions({screenshot_option, view_option, select_option, play_option});
   parser.process(app);
 
   rm::LibraryModel model;
@@ -53,5 +61,20 @@ int main(int argc, char** argv) {
   }
   view.resize(1280, 720);
   view.show();
+
+  QQuickItem* root = view.rootObject();
+  if (parser.isSet(play_option)) controller.playNow(parser.value(play_option));
+  if (parser.isSet(view_option)) root->setProperty("view", parser.value(view_option));
+  if (parser.isSet(select_option)) {
+    QMetaObject::invokeMethod(root, "openSwipe", Q_ARG(QVariant, filter.rowOf(parser.value(select_option))));
+  }
+  if (parser.isSet(screenshot_option)) {
+    const QString file = parser.value(screenshot_option);
+    QTimer::singleShot(1500, [&view, &app, file] {
+      const bool saved = view.grabWindow().save(file);
+      qInfo().noquote() << (saved ? "saved" : "could not save") << file;
+      app.exit(saved ? 0 : 1);
+    });
+  }
   return app.exec();
 }
