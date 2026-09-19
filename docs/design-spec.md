@@ -2,7 +2,7 @@
 
 Status: draft for iteration. The original notes file (`3D sound setup.md`) was superseded by this spec and removed; it is in the git history.
 
-Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots, and a `ShowRunner` that steps the sequencer, the A/V lead and the audio window per frame; tested on llvmpipe), an LED perimeter layout with a GPU downscale sampling path, a browser dashboard (main output, touch display, LED chain, status; section 13.1), and the Qt touch UI (`src/ui`, section 6.2) exist (Phase 0a and most of Phase 3). Not started: connecting the touch UI to the engine in one process, real audio playback and capture, real LED/spotlight transports, everything on the Pi.
+Implementation progress: the portable core (`src/core`: cue times, manifest parser, sequencer, play queue and browse policy, channel map), the `rm-validate` tool, the container test loop, and a headless projectM host (`src/render`: EGL context, host, PNG snapshots, and a `ShowRunner` that steps the sequencer, the A/V lead and the audio window per frame; tested on llvmpipe), an LED perimeter layout with a GPU downscale sampling path, a browser dashboard (main output, touch display, LED chain, status; section 13.1), the Qt touch UI (`src/ui`, section 6.2), and the engine that connects them in one process (`src/app`, section 14) exist (Phase 0a and most of Phase 3). Not started: real audio playback and capture, real LED/spotlight transports, everything on the Pi.
 
 ## 0. Goals
 A Raspberry Pi 5 appliance that runs projectM with two modes:
@@ -164,7 +164,7 @@ The identity package is in `docs/raspberry-milkshake-visual-profile/raspberry-mi
 - **QML module `Milkshake`** (`src/ui/qml`): `HomeScreen` (top bar, grid, swipe carousel, playback bar, empty state) built from `CoverTile`, `CollectionGrid`, `CollectionCarousel`, `PlaybackBar`, `RmButton`, `RmDropdown`, `CoverArt`, `LiveDot` and the `Theme` singleton. Previews start after 250 ms of stillness in the swipe view, and only while idle.
 - **SVG**: this Debian build ships no Qt SVG image-format plugin, so SVGs (covers, icons, the mark) load through an app-owned `image://svg/` provider that draws with `QSvgRenderer`. That keeps the UI independent of which plugins a distribution packages.
 - **Tests**: the model layer, controller and theme-versus-tokens check run as Catch2 tests, and 20 Qt Quick Test cases drive the real UI offscreen with simulated mouse input (filters, swipe, preview and queue rules). `rm-touch-ui --screenshot <file> [--view swipe] [--select <id>] [--play <id>]` renders a state offscreen for a visual check.
-- **Known gaps**: the swipe view has no page indicator, the grid has no keyboard focus handling (touch only, by design), and the controller does not play anything yet.
+- **Known gaps**: the swipe view has no page indicator and the grid has no keyboard focus handling (touch only, by design). The controller itself plays nothing: the engine acts on its signals (section 14).
 
 ## 7. Output sinks: compute once
 MilkDrop is a feedback system: each frame warps the previous frame. Evaluating only at LED locations therefore does not work, because the full field must be simulated at some resolution. The savings come from three other places:
@@ -238,11 +238,11 @@ MVP is Phases 0a–4.
 Purpose: develop and validate logic, UI, collection format and sync off the Pi, from a Windows host (Docker Desktop, WSL2 backend).
 
 - **Image**: one `dev` image on the same Debian base as Raspberry Pi OS (Trixie), with the build tools and Mesa EGL/GLES (llvmpipe software rendering). projectM is built from source by CMake (pinned v4.1.7). Qt 6.8 (the same series Raspberry Pi OS Trixie ships), noVNC/websockify and the Inter font are in the image too. Still to add: ALSA/ffmpeg dev libs. Build multi-arch (buildx) later so the Pi uses the same dependency set.
-- **Dashboard** (`docker compose run --rm fetch-presets` once, then `docker compose up dashboard`, browser at http://localhost:8080, bound to this machine only). `rm-devserver` runs a demo collection through the real sequencer and projectM host and serves:
+- **Dashboard** (`docker compose run --rm fetch-presets` once, then `docker compose up dashboard`, browser at http://localhost:8080, bound to this machine only). `rm-app` (the whole appliance in one process, section 14) serves:
   - **Main output**: an MJPEG stream of the rendered picture, framed per the brand's projector-output rule (thin neutral line, small raspberry live dot and `LIVE` label). This replaced the planned Xvfb + noVNC pane, which is not needed for a headless render.
   - **LED chain**: a canvas that draws the chain from the values the real LED sampling path produces (a GPU downscale of the same rendered frame, then `sample_leds`). The layout is a 76-LED perimeter strip for now. The same page can later point at a real Pi.
   - **Status**: current preset, media time, frame rate and cost, preset count, load errors and the GL renderer.
-  - **Touch display**: the real Qt touch UI (`rm-touch-ui`) on Qt's VNC platform plugin with the software renderer, shown through websockify + noVNC on port 6080 (also bound to this machine only). A mouse drag stands in for touch. The launcher (`tools/dev/run-dashboard.sh`) restarts the UI if it exits. It does not drive the main output yet: that arrives when the UI and the engine run in one process.
+  - **Touch display**: the real Qt touch UI, part of the same `rm-app` process, on Qt's VNC platform plugin with the software renderer, shown through websockify + noVNC on port 6080 (also bound to this machine only). A mouse drag stands in for touch, and what you do there drives the main output above. The launcher (`tools/dev/run-dashboard.sh`) restarts `rm-app` if it exits; extra options go in `RM_APP_ARGS` (for example `--track-seconds 6`).
   - The audio is synthetic (kick, hats, pad) until audio playback exists, and the frame rate is fixed at 30 fps in the container.
 - `docker compose run --rm test` builds and runs the suite. `docker compose run --rm dev` opens a shell in the container (source at `/src`, build tree at `/build`). The build tree lives in a named volume so artifacts stay out of the OneDrive-synced folder. In Git Bash on Windows, prefix commands that pass absolute container paths with `MSYS_NO_PATHCONV=1`.
 - Optional: WSLg passthrough for native windows.
@@ -274,3 +274,22 @@ Interactive latency harness (≤ 45 ms p95), 60 fps preset sweep, dynamic-resolu
 Frame time, GPU contention, latency and thermals. Software GL on x86 is not representative of the Pi's V3D GPU, so these acceptance targets (section 11) are only verified on hardware.
 
 Also, projectM's own timers (the MilkDrop `time` variable and the progress of a blended transition) follow the wall clock, not the frame count. Fast-stepped tests therefore assert hard cuts and picture content, not blend progress. Preset switches and audio windows are exact because the `ShowRunner` decides them from the frame index.
+
+## 14. Engine and app (as built)
+`rm-app` is the appliance in one process, as it will run on the Pi:
+
+```
+UI thread (Qt)      LibraryModel, LibraryFilter, AppController, QML home screen
+   | EngineBridge: controller signals -> engine commands; engine "finished" -> controller.next()
+Render thread       EGL context, ProjectMHost, Engine (tick per frame), LED downscale, JPEG
+HTTP threads (dev)  DashboardServer: MJPEG, LED colours, status
+```
+
+- **Engine** (`src/render/engine.*`, Qt-free): commands (`preview`, `stop_preview`, `play`, `stop`) can be posted from any thread and are applied by `tick()`, once per frame, on the thread that owns the projectM context. Time is the frame count, never the wall clock, so it is deterministic in tests.
+- **Modes**: idle (projectM's built-in idle preset), previewing, playing.
+- **Preview**: loops inside the collection's `preview` window, showing its `preset` if set and otherwise following the track's own cues. Previews are ignored while something plays, and `play` interrupts a preview. An interactive collection previews only its `preset`.
+- **Playing**: an album or playlist plays its tracks in order with their cues; an interactive collection plays its preset pool, switching every 8 bars, until stopped.
+- **The end of a collection**: the engine reports it once and keeps the visuals going for a short grace period (15 frames), so the next queued collection starts without flashing the idle screen. The bridge turns the report into `AppController::next()` on the UI thread.
+- **Dev stand-ins until audio exists**: every track plays for the same length (60 s, or `--track-seconds`), and the audio the visuals react to is synthetic music. Both are replaced when audio decoding lands.
+- **Tests**: 11 engine tests (frame-exact cues, track order and finish, preview looping, interruption rules, cross-thread commands) and 9 bridge tests running the real controller against a real engine. The full flow was also driven through the browser path (VNC taps): preview, play, queue, automatic advance, return to idle, preview again.
+- **Threading rule**: only the render thread touches the projectM host and GL context; the UI thread only posts commands and reads the last published status.

@@ -43,6 +43,8 @@ class LibraryModel : public QAbstractListModel {
 
   Q_INVOKABLE QString titleFor(const QString& id) const;
   std::optional<CollectionType> typeFor(const QString& id) const;
+  // The parsed manifest, or null for an unknown id. Valid until the next load().
+  const Collection* collection(const QString& id) const;
 
  signals:
   void loaded();
@@ -57,6 +59,7 @@ class LibraryModel : public QAbstractListModel {
     QStringList tags;
     QUrl cover;  // empty if the collection has no cover file
     int track_count = 0;
+    Collection collection;
   };
   const Entry* find(const QString& id) const;
 

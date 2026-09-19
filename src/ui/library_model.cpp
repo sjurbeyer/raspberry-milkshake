@@ -42,6 +42,7 @@ void LibraryModel::load(const QString& root) {
     e.type_enum = c.type;
     for (const std::string& tag : c.tags) e.tags << QString::fromStdString(tag);
     e.track_count = static_cast<int>(c.tracks.size());
+    e.collection = c;
     if (!c.cover.empty()) {
       const QString cover_path = sub.absoluteFilePath() + "/" + QString::fromStdString(c.cover);
       if (QFileInfo::exists(cover_path)) e.cover = QUrl::fromLocalFile(cover_path);
@@ -97,6 +98,11 @@ const LibraryModel::Entry* LibraryModel::find(const QString& id) const {
 QString LibraryModel::titleFor(const QString& id) const {
   const Entry* e = find(id);
   return e ? e->title : QString();
+}
+
+const Collection* LibraryModel::collection(const QString& id) const {
+  const Entry* e = find(id);
+  return e ? &e->collection : nullptr;
 }
 
 std::optional<CollectionType> LibraryModel::typeFor(const QString& id) const {

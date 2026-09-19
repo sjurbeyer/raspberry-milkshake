@@ -29,6 +29,8 @@ services:
       - "127.0.0.1:6080:6080"
     volumes:
       - presets:/presets
+    environment:
+      RM_APP_ARGS: ${RM_APP_ARGS:-}
     command: bash tools/dev/run-dashboard.sh
 
   # Downloads a community MilkDrop preset pack into the presets volume (once).

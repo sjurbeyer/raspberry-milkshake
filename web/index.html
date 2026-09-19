@@ -47,7 +47,7 @@
   <section class="rm-panel pane">
     <h2>touch display</h2>
     <iframe id="touch" class="touch" title="touch display"></iframe>
-    <p class="note">The real touch UI, shown through VNC. Drag with the mouse to swipe. It does not drive the main output yet: that arrives when the UI and the engine run in one process.</p>
+    <p class="note">The real touch UI, shown through VNC. Drag with the mouse to swipe. It drives the main output above: swiping to a collection previews it, and play, queue and next work as on the device.</p>
   </section>
   </div>
   <div class="col">
@@ -59,6 +59,8 @@
     <section class="rm-panel pane">
       <h2>status</h2>
       <dl>
+        <dt>main output</dt><dd id="s-mode">-</dd>
+        <dt>collection</dt><dd id="s-now">-</dd>
         <dt>preset</dt><dd id="s-preset">-</dd>
         <dt>media time</dt><dd id="s-time">-</dd>
         <dt>frame rate</dt><dd id="s-fps">-</dd>
@@ -125,7 +127,9 @@ async function ledLoop() {
 async function statusLoop() {
   try {
     const s = await getJson('/state.json');
-    $('s-preset').textContent = s.preset || '(idle)';
+    $('s-mode').textContent = s.mode;
+    $('s-now').textContent = s.title ? s.title + (s.track_count > 1 ? ' (track ' + s.track + ' of ' + s.track_count + ')' : '') : '-';
+    $('s-preset').textContent = s.preset || '-';
     $('s-time').textContent = s.media_seconds + ' s';
     $('s-fps').textContent = s.fps + ' / ' + s.target_fps + ' fps';
     $('s-cost').textContent = s.render_ms + ' ms per frame (' + s.width + '×' + s.height + ')';

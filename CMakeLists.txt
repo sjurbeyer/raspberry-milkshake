@@ -188,16 +188,14 @@ if(RM_BUILD_RENDER)
     src/render/downscaler.cpp
     src/render/jpeg.cpp
     src/render/engine.cpp
+    src/render/dashboard_server.cpp
   )
   target_include_directories(rm_render PUBLIC src)
   target_include_directories(rm_render SYSTEM PRIVATE ${stb_SOURCE_DIR})
-  target_link_libraries(rm_render PUBLIC rm_core libprojectM::projectM OpenGL::EGL OpenGL::GLES3)
-  target_compile_options(rm_render PRIVATE -Wall -Wextra -Wpedantic)
-
   find_package(Threads REQUIRED)
-  add_executable(rm-devserver tools/rm-devserver/main.cpp)
-  target_link_libraries(rm-devserver PRIVATE rm_render httplib::httplib Threads::Threads)
-  target_compile_options(rm-devserver PRIVATE -Wall -Wextra -Wpedantic)
+  target_link_libraries(rm_render PUBLIC rm_core libprojectM::projectM OpenGL::EGL OpenGL::GLES3
+                        PRIVATE httplib::httplib Threads::Threads)
+  target_compile_options(rm_render PRIVATE -Wall -Wextra -Wpedantic)
 
   add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp tests/engine_test.cpp)
   target_link_libraries(rm_render_tests PRIVATE rm_render Catch2::Catch2WithMain)
@@ -209,3 +207,21 @@ endif()
 # Tests tagged [sequencer] get their own label; everything else is "unit".
 catch_discover_tests(rm_tests TEST_SPEC "[sequencer]" PROPERTIES LABELS sequencer)
 catch_discover_tests(rm_tests TEST_SPEC "~[sequencer]" PROPERTIES LABELS unit)
+
+# The whole appliance in one process (UI + engine + dev dashboard server).
+if(RM_BUILD_UI AND RM_BUILD_RENDER)
+  add_library(rm_app src/app/engine_bridge.cpp)
+  set_target_properties(rm_app PROPERTIES AUTOMOC ON)
+  target_link_libraries(rm_app PUBLIC rm_ui rm_render)
+  target_compile_options(rm_app PRIVATE -Wall -Wextra -Wpedantic)
+
+  add_executable(rm-app src/app/main.cpp)
+  target_link_libraries(rm-app PRIVATE rm_app rm_ui_qml Qt6::Gui Qt6::Quick)
+  target_link_options(rm-app PRIVATE -Wl,--no-as-needed)
+  target_compile_options(rm-app PRIVATE -Wall -Wextra -Wpedantic)
+
+  add_executable(rm_app_tests tests/app_bridge_test.cpp)
+  target_link_libraries(rm_app_tests PRIVATE rm_app Qt6::Test Catch2::Catch2WithMain)
+  target_compile_definitions(rm_app_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+  catch_discover_tests(rm_app_tests PROPERTIES LABELS app)
+endif()
