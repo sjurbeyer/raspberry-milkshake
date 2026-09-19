@@ -97,7 +97,7 @@ struct Engine::Impl {
 
   void load_idle() {
     std::string error;
-    host.load_preset("idle://", kCut, error);
+    host.load_preset(kIdlePresetUrl, kCut, error);
   }
 
   void go_idle() {

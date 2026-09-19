@@ -27,7 +27,9 @@ int main(int argc, char** argv) {
   const QCommandLineOption view_option("view", "Start in the grid or swipe view.", "view");
   const QCommandLineOption select_option("select", "Open this collection id in the swipe view.", "id");
   const QCommandLineOption play_option("play", "Start playing this collection id.", "id");
-  parser.addOptions({screenshot_option, view_option, select_option, play_option});
+  const QCommandLineOption pause_option("pause", "Pause what --play started.");
+  const QCommandLineOption ask_stop_option("ask-stop", "Open the stop confirmation.");
+  parser.addOptions({screenshot_option, view_option, select_option, play_option, pause_option, ask_stop_option});
   parser.process(app);
 
   rm::LibraryModel model;
@@ -64,9 +66,13 @@ int main(int argc, char** argv) {
 
   QQuickItem* root = view.rootObject();
   if (parser.isSet(play_option)) controller.playNow(parser.value(play_option));
+  if (parser.isSet(pause_option)) controller.pause();
   if (parser.isSet(view_option)) root->setProperty("view", parser.value(view_option));
   if (parser.isSet(select_option)) {
     QMetaObject::invokeMethod(root, "openSwipe", Q_ARG(QVariant, filter.rowOf(parser.value(select_option))));
+  }
+  if (parser.isSet(ask_stop_option)) {
+    if (QObject* dialog = root->findChild<QObject*>("stopDialog")) QMetaObject::invokeMethod(dialog, "open");
   }
   if (parser.isSet(screenshot_option)) {
     const QString file = parser.value(screenshot_option);

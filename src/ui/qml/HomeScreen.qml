@@ -153,5 +153,34 @@ Item {
         id: playbackBar
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         controller: root.controller
+        onStopRequested: stopDialog.open()
     }
+
+    // Stopping ends what is playing and empties the queue, so it always asks first.
+    ConfirmDialog {
+        id: stopDialog
+        objectName: "stopDialog"
+        anchors.fill: parent
+        z: 40
+        title: "stop playback?"
+        message: root.controller.queueLength > 0
+                 ? "Stop " + root.controller.nowPlayingTitle + " and clear the queue?"
+                 : "Stop " + root.controller.nowPlayingTitle + "?"
+        confirmText: "stop"
+        onConfirmed: root.controller.stopAndClear()
+    }
+    Connections {
+        target: root.controller
+        function onTransportChanged() {
+            if (!root.controller.playing) stopDialog.close()  // it ended by itself while asking
+        }
+    }
+
+    // The space bar pauses and continues (for the keyboard in jam mode and without a touch display).
+    focus: true
+    Keys.onSpacePressed: event => {
+        if (root.controller.playing && !stopDialog.visible) root.controller.togglePause()
+        event.accepted = true
+    }
+    Component.onCompleted: forceActiveFocus()
 }

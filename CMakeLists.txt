@@ -92,7 +92,7 @@ if(RM_BUILD_UI)
   # The QML module. Shared, so its resources register themselves when the library loads.
   set(RM_QML_DIR ${CMAKE_SOURCE_DIR}/src/ui/qml)
   set(RM_BRAND_DIR ${CMAKE_SOURCE_DIR}/docs/raspberry-milkshake-visual-profile/raspberry-milkshake-brand)
-  set(RM_QML_NAMES Theme AppImage LiveDot RmButton RmDropdown CoverArt CoverTile CollectionGrid
+  set(RM_QML_NAMES Theme AppImage LiveDot RmButton RmDropdown ConfirmDialog CoverArt CoverTile CollectionGrid
                    CollectionCarousel PlaybackBar HomeScreen)
   set(RM_QML_FILES)
   foreach(name IN LISTS RM_QML_NAMES)
@@ -204,7 +204,7 @@ if(RM_BUILD_RENDER)
   target_compile_options(rm_render PRIVATE -Wall -Wextra -Wpedantic)
 
   add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp tests/engine_test.cpp
-    tests/engine_rating_test.cpp tests/dashboard_server_test.cpp tests/engine_pause_test.cpp)
+    tests/engine_rating_test.cpp tests/dashboard_server_test.cpp tests/engine_pause_test.cpp tests/engine_idle_test.cpp)
   target_link_libraries(rm_render_tests PRIVATE rm_render httplib::httplib Threads::Threads Catch2::Catch2WithMain)
   target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_compile_options(rm_render_tests PRIVATE -Wall -Wextra -Wpedantic)

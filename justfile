@@ -5,7 +5,9 @@ set windows-shell := ["pwsh.exe", "-NoLogo", "-NoProfile", "-Command"]
 
 # How long every track plays until real audio exists. Try: just track_seconds=6 dashboard
 track_seconds := "60"
-export RM_APP_ARGS := "--track-seconds " + track_seconds
+# What the main output shows while paused: hold, fade or home. Try: just pause_display=fade dashboard
+pause_display := "hold"
+export RM_APP_ARGS := "--track-seconds " + track_seconds + " --pause-display " + pause_display
 
 dashboard_url := "http://localhost:8080"
 

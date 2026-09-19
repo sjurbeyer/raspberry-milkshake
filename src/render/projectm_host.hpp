@@ -10,6 +10,10 @@
 
 namespace rm {
 
+// projectM's built-in idle visual. Its loader needs the full name after idle:// (a bare "idle://"
+// throws in projectM 4.1.7), so this is a constant in one place; a test guards that it still loads.
+inline constexpr const char* kIdlePresetUrl = "idle://Geiss & Sperl - Feedback (projectM idle HDR mix).milk";
+
 struct HostConfig {
   int width = 640;
   int height = 360;

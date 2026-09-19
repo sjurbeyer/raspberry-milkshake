@@ -39,6 +39,7 @@ struct RenderSettings {
   int height = 360;
   int fps = 30;
   double track_seconds = 60;
+  rm::PauseDisplay pause_display = rm::PauseDisplay::Hold;
   fs::path presets;
   fs::path fallback_presets;
 };
@@ -48,6 +49,7 @@ const char* mode_name(rm::EngineMode mode) {
     case rm::EngineMode::Idle: return "idle";
     case rm::EngineMode::Previewing: return "preview";
     case rm::EngineMode::Playing: return "playing";
+    case rm::EngineMode::Paused: return "paused";
   }
   return "idle";
 }
@@ -106,6 +108,7 @@ void render_thread(const RenderSettings& settings, const rm::DirCatalog& catalog
   rm::EngineConfig config;
   config.fps = settings.fps;
   config.preset_root = preset_root;
+  config.pause_display = settings.pause_display;
   config.dev_track_length = static_cast<rm::SamplePos>(settings.track_seconds * static_cast<double>(rm::kSampleRate));
   rm::Engine engine(*host, catalog, config);
   ready.set_value(&engine);
@@ -126,8 +129,10 @@ void render_thread(const RenderSettings& settings, const rm::DirCatalog& catalog
       qWarning().noquote() << "preset failed to load:" << QString::fromStdString(status.last_error);
       last_logged_error = status.last_error;
     }
-    const rm::Frame full = host->read_frame();
+    // The LEDs are sampled before the pause icon is drawn, so they never show it.
     const auto colors = rm::sample_leds(scaler.capture(settings.width, settings.height), layout);
+    engine.draw_overlays();
+    const rm::Frame full = host->read_frame();
     std::vector<std::uint8_t> jpeg = rm::encode_jpeg(full, 75);
     const auto done = std::chrono::steady_clock::now();
 
@@ -169,14 +174,19 @@ int main(int argc, char** argv) {
   const QCommandLineOption port_option("port", "Dashboard HTTP port.", "port", "8080");
   const QCommandLineOption fps_option("fps", "Main output frame rate.", "fps", "30");
   const QCommandLineOption track_option("track-seconds", "Length of every track until audio decoding exists.", "s", "60");
+  const QCommandLineOption pause_option("pause-display", "What the main output shows while paused: hold, fade or home.", "mode", "hold");
   const QCommandLineOption size_option("size", "Main output size.", "WxH", "640x360");
   const QCommandLineOption web_option("web", "Dashboard page folder.", "dir", "web");
-  parser.addOptions({library_option, presets_option, fallback_option, port_option, fps_option, track_option, size_option, web_option});
+  parser.addOptions({library_option, presets_option, fallback_option, port_option, fps_option, track_option, pause_option, size_option, web_option});
   parser.process(app);
 
   RenderSettings settings;
   settings.fps = parser.value(fps_option).toInt();
   settings.track_seconds = parser.value(track_option).toDouble();
+  const QString pause_display = parser.value(pause_option);
+  if (pause_display == "fade") settings.pause_display = rm::PauseDisplay::Fade;
+  else if (pause_display == "home") settings.pause_display = rm::PauseDisplay::Home;
+  else if (pause_display != "hold") qWarning().noquote() << "unknown --pause-display" << pause_display << "- using hold";
   const QStringList size = parser.value(size_option).split('x');
   if (size.size() == 2) {
     settings.width = size[0].toInt();

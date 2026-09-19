@@ -44,8 +44,8 @@ struct EngineConfig {
   int finish_grace_frames = 15;
 
   PauseDisplay pause_display = PauseDisplay::Hold;
-  // Shown by PauseDisplay::Home: a preset path relative to preset_root, or a URL such as idle://.
-  std::string home_preset = "idle://";
+  // Shown by PauseDisplay::Home: a preset path relative to preset_root, or a URL such as kIdlePresetUrl.
+  std::string home_preset = kIdlePresetUrl;
   // How the picture goes to the home visualization and back.
   Transition pause_transition{Transition::Kind::Blend, 1.0};
   // Length of the fades of PauseDisplay::Fade, in frames (0: half a second).
