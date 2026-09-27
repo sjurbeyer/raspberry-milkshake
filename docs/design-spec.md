@@ -144,7 +144,7 @@ bpm = 122                         # optional, else from analysis
 - Audio is FLAC (master) with optional Opus for size. Multichannel is supported in both.
 
 ### 5.1 Tools
-- `rm-import` (laptop): transcode to 48 kHz, apply loudness gain, generate cover thumbnails (256² and 512², pre-scaled), compute the beat grid and preview offset, and validate cues against the bench DB.
+- **Shaker** (laptop, separate repo, [shaker-spec.md](shaker-spec.md)): the collection editor. Retires the `rm-import` CLI this section used to plan — Shaker absorbs that job (transcode to 48 kHz, loudness-normalize, generate cover thumbnails, detect the beat grid) inside a timeline UI for scheduling presets against a waveform, plus preset browsing/rating and validated export.
 - `rm-bench` (Pi): the preset bench from section 4.
 
 ## 6. Touch UI (Qt Quick, 1280×720 landscape)
@@ -196,7 +196,7 @@ Spotlights use the same sampling plus temporal smoothing. LED transports are abs
 src/engine/   audio, sequencer, projectM host, canvas, sinks
 src/ui/       QML and view models
 src/app/      main, config, systemd glue
-tools/        rm-import, rm-bench
+tools/        rm-bench (Shaker, the collection editor, is a separate repo)
 docs/         design-spec.md, show-format.md, raspberry-milkshake-visual-profile/ (brand)
 packaging/    systemd unit, image build, config templates
 tests/        parser, sequencer (fake clock), cue timing
@@ -219,7 +219,7 @@ None are on the critical path, so they are out of v1. The engine exposes an `Ana
   - S4: software latency harness using the capture and flip timestamps.
   - S5: preset-load hitch measurement, with and without a warm Mesa shader cache.
 - **Phase 1**: engine core (audio, sequencer, projectM host, A/V offset, queue), driven from a CLI.
-- **Phase 2**: collection format, parser, validator, `rm-import`, `rm-bench`, two sample collections.
+- **Phase 2**: collection format, parser, validator, `rm-bench`, two sample collections. (Authoring tooling is Shaker, a separate repo/track of work; see [shaker-spec.md](shaker-spec.md).)
 - **Phase 3**: touch UI (grid, swipe, filters, queue/play logic, preview rules).
 - **Phase 4**: interactive mode (capture path, keyboard navigation, banks, OSD) and latency tuning.
 - **Phase 5**: canvas and sinks (LED, spotlight, planner).
