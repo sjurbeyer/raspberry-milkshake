@@ -217,7 +217,7 @@ catch_discover_tests(rm_tests TEST_SPEC "~[sequencer]" PROPERTIES LABELS unit)
 
 # The whole appliance in one process (UI + engine + dev dashboard server).
 if(RM_BUILD_UI AND RM_BUILD_RENDER)
-  add_library(rm_app src/app/engine_bridge.cpp)
+  add_library(rm_app src/app/engine_bridge.cpp src/app/headless.cpp)
   set_target_properties(rm_app PROPERTIES AUTOMOC ON)
   target_link_libraries(rm_app PUBLIC rm_ui rm_render)
   target_compile_options(rm_app PRIVATE -Wall -Wextra -Wpedantic)
@@ -227,7 +227,8 @@ if(RM_BUILD_UI AND RM_BUILD_RENDER)
   target_link_options(rm-app PRIVATE -Wl,--no-as-needed)
   target_compile_options(rm-app PRIVATE -Wall -Wextra -Wpedantic)
 
-  add_executable(rm_app_tests tests/app_bridge_test.cpp tests/app_bridge_pause_test.cpp)
+  add_executable(rm_app_tests tests/app_bridge_test.cpp tests/app_bridge_pause_test.cpp
+    tests/headless_test.cpp tests/app_headless_test.cpp)
   target_link_libraries(rm_app_tests PRIVATE rm_app Qt6::Test Catch2::Catch2WithMain)
   target_compile_definitions(rm_app_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   catch_discover_tests(rm_app_tests PROPERTIES LABELS app)

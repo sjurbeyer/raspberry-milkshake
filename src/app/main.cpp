@@ -17,6 +17,7 @@
 #include <thread>
 
 #include "app/engine_bridge.hpp"
+#include "app/headless.hpp"
 #include "core/dir_catalog.hpp"
 #include "core/led_layout.hpp"
 #include "render/dashboard_server.hpp"
@@ -40,6 +41,7 @@ struct RenderSettings {
   int fps = 30;
   double track_seconds = 60;
   rm::PauseDisplay pause_display = rm::PauseDisplay::Hold;
+  bool headless = false;  // no touch display: no window, dashboard/status say so
   fs::path presets;
   fs::path fallback_presets;
 };
@@ -82,7 +84,8 @@ std::string status_json(const rm::EngineStatus& s, const RenderSettings& r, cons
       << ",\"preset\":\"" << rm::json_escape(s.preset) << "\"," << numbers << ",\"renderer\":\""
       << rm::json_escape(renderer) << "\",\"preset_count\":" << preset_count << ",\"errors\":" << s.error_count
       << ",\"last_error\":\"" << rm::json_escape(s.last_error) << "\",\"width\":" << r.width
-      << ",\"height\":" << r.height << ",\"target_fps\":" << r.fps << ",\"leds\":" << led_count << "}";
+      << ",\"height\":" << r.height << ",\"target_fps\":" << r.fps << ",\"leds\":" << led_count
+      << ",\"headless\":" << (r.headless ? "true" : "false") << "}";
   return out.str();
 }
 
@@ -177,11 +180,20 @@ int main(int argc, char** argv) {
   const QCommandLineOption pause_option("pause-display", "What the main output shows while paused: hold, fade or home.", "mode", "hold");
   const QCommandLineOption size_option("size", "Main output size.", "WxH", "640x360");
   const QCommandLineOption web_option("web", "Dashboard page folder.", "dir", "web");
-  parser.addOptions({library_option, presets_option, fallback_option, port_option, fps_option, track_option, pause_option, size_option, web_option});
+  const QCommandLineOption headless_option("headless", "Force headless mode (no window), whatever displays are detected.");
+  const QCommandLineOption ui_option("ui", "Force the touch UI window, even with no display detected.");
+  parser.addOptions({library_option, presets_option, fallback_option, port_option, fps_option, track_option,
+                     pause_option, size_option, web_option, headless_option, ui_option});
   parser.process(app);
+  if (parser.isSet(headless_option) && parser.isSet(ui_option)) {
+    qCritical() << "--headless and --ui are mutually exclusive";
+    return 2;
+  }
 
   RenderSettings settings;
   settings.fps = parser.value(fps_option).toInt();
+  settings.headless = rm::should_run_headless(QGuiApplication::screens().size(), parser.isSet(headless_option),
+                                              parser.isSet(ui_option));
   settings.track_seconds = parser.value(track_option).toDouble();
   const QString pause_display = parser.value(pause_option);
   if (pause_display == "fade") settings.pause_display = rm::PauseDisplay::Fade;
@@ -200,8 +212,7 @@ int main(int argc, char** argv) {
   model.load(parser.value(library_option));
   for (const QString& problem : model.problems()) qWarning().noquote() << "skipped collection:" << problem;
   qInfo().noquote() << model.rowCount() << "collections from" << parser.value(library_option);
-  rm::LibraryFilter filter;
-  filter.setSourceModel(&model);
+  if (settings.headless) qInfo() << "no touch display detected (or --headless): running headless";
   rm::AppController controller(&model);
 
   // The presets. The catalog is shared with the dashboard's rating endpoint, so it lives here.
@@ -256,21 +267,36 @@ int main(int argc, char** argv) {
                    [](const QString& id) { qInfo().noquote() << "play:" << id; });
   QObject::connect(&controller, &rm::AppController::stopped, [] { qInfo() << "stopped"; });
 
-  QQuickView view;
-  view.setTitle("raspberry milkshake");
-  view.setResizeMode(QQuickView::SizeRootObjectToView);
-  view.engine()->addImageProvider("svg", new rm::SvgImageProvider);
-  view.setInitialProperties({{"libraryFilter", QVariant::fromValue<QObject*>(&filter)},
-                             {"controller", QVariant::fromValue<QObject*>(&controller)},
-                             {"tags", model.allTags()}});
-  view.loadFromModule("Milkshake", "HomeScreen");
   int exit_code = 1;
-  if (view.status() == QQuickView::Ready) {
-    view.resize(1280, 720);
-    view.show();
+  if (settings.headless) {
+    // No touch UI: play the interactive collection by itself. design-spec.md section 15.1 item 3.
+    const QString id = rm::find_default_interactive_id(model);
+    if (!id.isEmpty()) {
+      qInfo().noquote() << "starting interactive collection automatically:" << id;
+      controller.playNow(id);
+    } else {
+      qWarning() << "no interactive collection found in the library; staying idle";
+    }
     exit_code = app.exec();
   } else {
-    qCritical() << "could not load the home screen";
+    rm::LibraryFilter filter;
+    filter.setSourceModel(&model);
+
+    QQuickView view;
+    view.setTitle("raspberry milkshake");
+    view.setResizeMode(QQuickView::SizeRootObjectToView);
+    view.engine()->addImageProvider("svg", new rm::SvgImageProvider);
+    view.setInitialProperties({{"libraryFilter", QVariant::fromValue<QObject*>(&filter)},
+                               {"controller", QVariant::fromValue<QObject*>(&controller)},
+                               {"tags", model.allTags()}});
+    view.loadFromModule("Milkshake", "HomeScreen");
+    if (view.status() == QQuickView::Ready) {
+      view.resize(1280, 720);
+      view.show();
+      exit_code = app.exec();
+    } else {
+      qCritical() << "could not load the home screen";
+    }
   }
 
   // Stop everything that points at the engine before the render thread (and the engine) goes away.

@@ -52,6 +52,7 @@
     <h2>touch display</h2>
     <iframe id="touch" class="touch" title="touch display"></iframe>
     <p class="note">The real touch UI, shown through VNC. Drag with the mouse to swipe. It drives the main output above: swiping to a collection previews it, and play, queue and next work as on the device.</p>
+    <p class="note warn" id="headless-note" style="display:none">Running headless: no touch display was detected (or the app was started with <code>--headless</code>), so there is no touch UI to show here. The main output is playing the interactive collection by itself.</p>
   </section>
   </div>
   <div class="col">
@@ -161,6 +162,8 @@ async function statusLoop() {
   try {
     const s = await getJson('/state.json');
     $('s-mode').textContent = s.mode;
+    $('touch').style.display = s.headless ? 'none' : '';
+    $('headless-note').style.display = s.headless ? '' : 'none';
     $('s-now').textContent = s.title ? s.title + (s.track_count > 1 ? ' (track ' + s.track + ' of ' + s.track_count + ')' : '') : '-';
     $('s-preset').textContent = s.preset || '-';
     showRating(s);
