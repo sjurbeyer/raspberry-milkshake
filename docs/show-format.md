@@ -79,7 +79,13 @@ All times are stored as sample positions at 48 kHz, so scheduling is sample-accu
 ### Pool expressions
 `"all"`, `"tag:<name>"`, or `"dir:<relative dir>"`. Selection is deterministic for a given `seed` and never repeats the previous choice when the pool has more than one preset. Presets rated 0 (`fRating=0` in the `.milk` file) are never in a pool, so a show's random choices change when a preset is hidden. A preset named directly in `preset = "..."` always plays, whatever its rating.
 
-**`tag:` pools are not effective yet.** Tags are meant to come from a `presets/tags.toml` sidecar (proposed in [shaker-spec.md](shaker-spec.md) §10, written by the Shaker editor), but `DirCatalog` (`src/core/dir_catalog.cpp`) does not read it yet, so `Kind::Tag` always resolves to an empty pool today. Use `all` or `dir:` until that lands.
+**`tag:` pools are not effective yet.** Tags are meant to come from a `presets/tags.toml` sidecar next to the preset folder, written by Shaker (design-spec.md §5.1, a separate collection-editor repo) — a table keyed by each preset's path (relative to the presets folder, forward slashes, same keying `DirCatalog` already uses everywhere else):
+```toml
+# presets/tags.toml
+["cream-of-the-crop/Fractal/Pointy/suksma - do what thou won't.milk"]
+tags = ["edm", "trippy"]
+```
+A sidecar rather than a field inside the `.milk` file itself, because community preset packs get re-downloaded wholesale and would silently wipe anything embedded there; unlike `fRating` (an existing MilkDrop field other tools already understand), tags have no such precedent to piggyback on. `DirCatalog` (`src/core/dir_catalog.cpp`) does not read this file yet, so `Kind::Tag` always resolves to an empty pool today — that read-side change is still to do, in this repo. Use `all` or `dir:` until it lands.
 
 ## Preview
 The preview plays while browsing in the swipe view, but only when nothing else is playing.

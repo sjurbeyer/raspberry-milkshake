@@ -144,7 +144,7 @@ bpm = 122                         # optional, else from analysis
 - Audio is FLAC (master) with optional Opus for size. Multichannel is supported in both.
 
 ### 5.1 Tools
-- **Shaker** (laptop, separate repo, [shaker-spec.md](shaker-spec.md)): the collection editor. Retires the `rm-import` CLI this section used to plan — Shaker absorbs that job (transcode to 48 kHz, loudness-normalize, generate cover thumbnails, detect the beat grid) inside a timeline UI for scheduling presets against a waveform, plus preset browsing/rating and validated export.
+- **Shaker** (laptop, a separate repo — not part of this one, its own technical spec lives there): the collection editor, a movie-editor-style app for scheduling `.milk` presets against a song's waveform. Retires the `rm-import` CLI this section used to plan — Shaker absorbs that job (transcode to 48 kHz, loudness-normalize, generate cover thumbnails, detect the beat grid), plus preset browsing/rating and validated export. It shares this repo's `rm_core` (parser, validator, sequencer, `DirCatalog`, preset ratings) via git submodule, so an export is guaranteed valid because the same parser checks it; it does not share `rm_render`, which is GLES/EGL-specific to the Pi and the dev container.
 - `rm-bench` (Pi): the preset bench from section 4.
 
 ## 6. Touch UI (Qt Quick, 1280×720 landscape)
@@ -219,7 +219,7 @@ None are on the critical path, so they are out of v1. The engine exposes an `Ana
   - S4: software latency harness using the capture and flip timestamps.
   - S5: preset-load hitch measurement, with and without a warm Mesa shader cache.
 - **Phase 1**: engine core (audio, sequencer, projectM host, A/V offset, queue), driven from a CLI.
-- **Phase 2**: collection format, parser, validator, `rm-bench`, two sample collections. (Authoring tooling is Shaker, a separate repo/track of work; see [shaker-spec.md](shaker-spec.md).)
+- **Phase 2**: collection format, parser, validator, `rm-bench`, two sample collections. (Authoring tooling is Shaker, section 5.1 — a separate repo and track of work, not built from this one.)
 - **Phase 3**: touch UI (grid, swipe, filters, queue/play logic, preview rules).
 - **Phase 4**: interactive mode (capture path, keyboard navigation, banks, OSD) and latency tuning.
 - **Phase 5**: canvas and sinks (LED, spotlight, planner).
