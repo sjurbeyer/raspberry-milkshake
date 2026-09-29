@@ -12,15 +12,32 @@
         "RM_BUILD_RENDER": "ON",
         "RM_BUILD_UI": "ON"
       }
+    },
+    {
+      "name": "pi",
+      "displayName": "Raspberry Pi (native build)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "RM_BUILD_RENDER": "ON",
+        "RM_BUILD_UI": "ON"
+      }
     }
   ],
   "buildPresets": [
-    { "name": "container", "configurePreset": "container" }
+    { "name": "container", "configurePreset": "container" },
+    { "name": "pi", "configurePreset": "pi" }
   ],
   "testPresets": [
     {
       "name": "container",
       "configurePreset": "container",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "pi",
+      "configurePreset": "pi",
       "output": { "outputOnFailure": true }
     }
   ]

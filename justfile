@@ -83,3 +83,42 @@ forget-shaders:
 clean-build:
     docker compose down
     docker volume rm raspberry-milkshake_build
+
+# --- Raspberry Pi: build and test on the real hardware -----------------------------------
+# One-time setup: docs/pi-setup.md. Override the host/user with PI_HOST/PI_USER, e.g.
+# `just pi_host=192.168.1.50 pi-sync`.
+pi_host := env_var_or_default("PI_HOST", "raspberrymilkshake.local")
+pi_user := env_var_or_default("PI_USER", "pi")
+
+# Install build dependencies on the Pi (once; safe to re-run after Dockerfile's list changes)
+pi-bootstrap:
+    ssh {{pi_user}}@{{pi_host}} "bash -s" < tools/pi/bootstrap.sh
+
+# Create the working repo on the Pi and point this repo's "pi" remote at it (once)
+pi-init-repo:
+    ssh {{pi_user}}@{{pi_host}} "bash -s" < tools/pi/init-repo.sh
+    git remote add pi {{pi_user}}@{{pi_host}}:raspberry-milkshake/.git
+
+# Push the current commit to the Pi (updates its working tree too); commit before syncing
+pi-sync:
+    git push pi HEAD:refs/heads/main -f
+
+# Configure and build on the Pi (native arm64)
+pi-build:
+    ssh {{pi_user}}@{{pi_host}} "cd raspberry-milkshake && cmake --preset pi && cmake --build --preset pi"
+
+# Run every test on the Pi
+pi-test:
+    ssh {{pi_user}}@{{pi_host}} "cd raspberry-milkshake && ctest --preset pi"
+
+# Run one label of tests on the Pi: unit, sequencer, render, ui or app
+pi-test-label label:
+    ssh {{pi_user}}@{{pi_host}} "cd raspberry-milkshake && ctest --preset pi -L {{label}}"
+
+# Run rm-app on the Pi's own real screens; extra args pass through, e.g. `just pi-run --headless`
+pi-run *args:
+    ssh -t {{pi_user}}@{{pi_host}} "cd raspberry-milkshake && ./build/rm-app {{args}}"
+
+# A shell on the Pi, in the synced working tree
+pi-shell:
+    ssh -t {{pi_user}}@{{pi_host}} "cd raspberry-milkshake && exec bash -l"
