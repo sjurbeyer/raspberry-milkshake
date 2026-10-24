@@ -163,10 +163,11 @@ if(RM_BUILD_RENDER)
   set(CMAKE_PROJECT_VERSION_MAJOR 4)
   set(CMAKE_PROJECT_VERSION_MINOR 1)
   set(CMAKE_PROJECT_VERSION_PATCH 7)
+  # No GIT_SHALLOW: this pins a raw commit, not a tag, and a shallow clone can't resolve it via
+  # ls-remote, so it only fetches the default branch tip and then fails to check out this commit.
   FetchContent_Declare(stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
     GIT_TAG 2c980bb59875b0d32144a71867fbdebb2f77cd20
-    GIT_SHALLOW TRUE
     SYSTEM)
   set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
   set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
