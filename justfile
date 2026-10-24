@@ -92,11 +92,13 @@ pi_user := env_var_or_default("PI_USER", "pi")
 
 # Install build dependencies on the Pi (once; safe to re-run after Dockerfile's list changes)
 pi-bootstrap:
-    ssh {{pi_user}}@{{pi_host}} "bash -s" < tools/pi/bootstrap.sh
+    scp tools/pi/bootstrap.sh {{pi_user}}@{{pi_host}}:/tmp/rm-bootstrap.sh
+    ssh -t {{pi_user}}@{{pi_host}} "bash /tmp/rm-bootstrap.sh && rm /tmp/rm-bootstrap.sh"
 
 # Create the working repo on the Pi and point this repo's "pi" remote at it (once)
 pi-init-repo:
-    ssh {{pi_user}}@{{pi_host}} "bash -s" < tools/pi/init-repo.sh
+    scp tools/pi/init-repo.sh {{pi_user}}@{{pi_host}}:/tmp/rm-init-repo.sh
+    ssh {{pi_user}}@{{pi_host}} "bash /tmp/rm-init-repo.sh && rm /tmp/rm-init-repo.sh"
     git remote add pi {{pi_user}}@{{pi_host}}:raspberry-milkshake/.git
 
 # Push the current commit to the Pi (updates its working tree too); commit before syncing
