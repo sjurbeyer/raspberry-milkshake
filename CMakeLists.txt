@@ -21,6 +21,7 @@ add_library(rm_core
   src/core/clock.cpp
   src/core/cue_time.cpp
   src/core/manifest.cpp
+  src/core/manifest_writer.cpp
   src/core/sequencer.cpp
   src/core/policy.cpp
   src/core/channel_map.cpp
@@ -45,6 +46,7 @@ add_executable(rm_tests
   tests/clock_test.cpp
   tests/cue_time_test.cpp
   tests/manifest_test.cpp
+  tests/manifest_writer_test.cpp
   tests/sequencer_test.cpp
   tests/policy_test.cpp
   tests/channel_map_test.cpp

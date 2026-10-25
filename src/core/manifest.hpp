@@ -29,6 +29,8 @@ struct Transition {
   enum class Kind { Cut, Blend };
   Kind kind = Kind::Cut;
   double seconds = 0.0;  // blend duration
+
+  bool operator==(const Transition&) const = default;
 };
 
 // Which presets a pool cue may pick from: "all", "tag:<name>" or "dir:<relative dir>".
@@ -36,6 +38,8 @@ struct PoolExpr {
   enum class Kind { All, Tag, Dir };
   Kind kind = Kind::All;
   std::string arg;
+
+  bool operator==(const PoolExpr&) const = default;
 };
 
 std::expected<Transition, std::string> parse_transition(std::string_view text);  // "cut" | "blend:<s>"
@@ -47,6 +51,8 @@ struct Cue {
   std::optional<PoolExpr> pool;
   std::optional<SamplePos> every;     // repeat interval (pool cues only)
   std::optional<Transition> transition;
+
+  bool operator==(const Cue&) const = default;
 };
 
 struct Track {
@@ -55,6 +61,8 @@ struct Track {
   std::string title;
   MusicalContext grid;
   std::vector<Cue> cues;
+
+  bool operator==(const Track&) const = default;
 };
 
 struct Preview {
@@ -62,6 +70,8 @@ struct Preview {
   SamplePos start = 0;
   SamplePos length = 0;
   std::string preset;
+
+  bool operator==(const Preview&) const = default;
 };
 
 struct Collection {
@@ -75,7 +85,12 @@ struct Collection {
   std::uint64_t seed = 0;
   std::optional<PoolExpr> preset_pool;  // interactive only
   std::vector<Track> tracks;
+
+  bool operator==(const Collection&) const = default;
 };
+
+// The seed a collection gets when `seed` is not set: a stable hash of the title.
+std::uint64_t default_seed(std::string_view title);
 
 struct ParseResult {
   std::optional<Collection> collection;  // present only when there are no errors
@@ -90,5 +105,13 @@ ParseResult parse_manifest(std::string_view toml_text);
 // playlist `from` paths resolve against its parent (the library root).
 void check_files(const Collection& collection, const std::filesystem::path& collection_dir,
                  std::vector<Diagnostic>& out);
+
+// Serializes `collection` as collection.toml text, keys in the order of the documented examples.
+// Round-trips: parse_manifest(write_manifest(c)).collection == c for any collection that
+// parse_manifest produced. Every time is written in a form that parses back to the same sample
+// (musical when it lands exactly on the track's grid, absolute otherwise); comments and the
+// original spelling of a hand-written file are not preserved. Does not validate: run
+// parse_manifest on the result for diagnostics.
+std::string write_manifest(const Collection& collection);
 
 }  // namespace rm

@@ -371,6 +371,8 @@ void parse_preview(Sink& sink, const toml::table& table, CollectionType type,
 
 }  // namespace
 
+std::uint64_t default_seed(std::string_view title) { return fnv1a(title); }
+
 ParseResult parse_manifest(std::string_view text) {
   ParseResult result;
   Sink sink{result.diagnostics};
@@ -406,7 +408,7 @@ ParseResult parse_manifest(std::string_view text) {
     c.title = *title;
   }
   c.artist = top.string("artist").value_or("");
-  c.seed = fnv1a(c.title);
+  c.seed = default_seed(c.title);
   if (const auto seed = top.integer("seed")) c.seed = static_cast<std::uint64_t>(*seed);
 
   if (const toml::array* tags = top.array("tags")) {

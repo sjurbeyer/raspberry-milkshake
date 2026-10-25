@@ -5,7 +5,7 @@ A **collection** is a directory containing `collection.toml`, a cover image, and
 ```
 rm-validate [--no-check-files] <collection-dir>
 ```
-Exit code 0 means valid (warnings allowed), 1 means validation errors, 2 means usage or I/O problems. The reference implementation is `src/core/manifest.cpp`; a complete example is `examples/collections/night-drive/collection.toml`.
+Exit code 0 means valid (warnings allowed), 1 means validation errors, 2 means usage or I/O problems. The reference implementation is `src/core/manifest.cpp`; a complete example is `examples/collections/night-drive/collection.toml`. Tools that generate manifests (Shaker) use `rm::write_manifest` (`src/core/manifest_writer.cpp`), which round-trips through the parser to the exact sample but does not preserve comments or the original spelling of times.
 
 ## Library layout
 ```

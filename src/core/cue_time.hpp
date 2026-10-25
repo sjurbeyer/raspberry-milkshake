@@ -13,6 +13,8 @@ struct MusicalContext {
   double bpm = 0.0;
   int beats_per_bar = 4;
   SamplePos downbeat_offset = 0;  // sample position of bar 1, beat 1
+
+  bool operator==(const MusicalContext&) const = default;
 };
 
 using TimeResult = std::expected<SamplePos, std::string>;
