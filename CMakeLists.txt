@@ -56,17 +56,17 @@ add_executable(rm_tests
   tests/dir_catalog_rating_test.cpp
 )
 target_link_libraries(rm_tests PRIVATE rm_core Catch2::Catch2WithMain)
-target_compile_definitions(rm_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(rm_tests PRIVATE RM_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_options(rm_tests PRIVATE -Wall -Wextra -Wpedantic)
 
 add_test(NAME rm_validate_example
-  COMMAND rm-validate --no-check-files ${CMAKE_SOURCE_DIR}/examples/collections/night-drive)
+  COMMAND rm-validate --no-check-files ${CMAKE_CURRENT_SOURCE_DIR}/examples/collections/night-drive)
 add_test(NAME rm_validate_reports_missing_files
-  COMMAND rm-validate ${CMAKE_SOURCE_DIR}/examples/collections/night-drive)
+  COMMAND rm-validate ${CMAKE_CURRENT_SOURCE_DIR}/examples/collections/night-drive)
 set_tests_properties(rm_validate_reports_missing_files PROPERTIES
   PASS_REGULAR_EXPRESSION "audio file not found")
 add_test(NAME rm_validate_reports_invalid_manifest
-  COMMAND rm-validate --no-check-files ${CMAKE_SOURCE_DIR}/tests/fixtures/invalid/no-title)
+  COMMAND rm-validate --no-check-files ${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/invalid/no-title)
 set_tests_properties(rm_validate_reports_invalid_manifest PROPERTIES
   PASS_REGULAR_EXPRESSION "collection.toml:1: error: \\[title\\] missing required key")
 set_tests_properties(rm_validate_example rm_validate_reports_missing_files
@@ -90,8 +90,8 @@ if(RM_BUILD_UI)
   target_compile_options(rm_ui PRIVATE -Wall -Wextra -Wpedantic)
 
   # The QML module. Shared, so its resources register themselves when the library loads.
-  set(RM_QML_DIR ${CMAKE_SOURCE_DIR}/src/ui/qml)
-  set(RM_BRAND_DIR ${CMAKE_SOURCE_DIR}/docs/raspberry-milkshake-visual-profile/raspberry-milkshake-brand)
+  set(RM_QML_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/qml)
+  set(RM_BRAND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/docs/raspberry-milkshake-visual-profile/raspberry-milkshake-brand)
   set(RM_QML_NAMES Theme AppImage LiveDot RmButton RmDropdown ConfirmDialog CoverArt CoverTile CollectionGrid
                    CollectionCarousel PlaybackBar HomeScreen)
   set(RM_QML_FILES)
@@ -126,7 +126,7 @@ if(RM_BUILD_UI)
   add_executable(rm_ui_tests tests/ui_model_test.cpp tests/ui_theme_test.cpp tests/ui_svg_test.cpp
     tests/ui_pause_test.cpp)
   target_link_libraries(rm_ui_tests PRIVATE rm_ui Qt6::Test Catch2::Catch2WithMain)
-  target_compile_definitions(rm_ui_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+  target_compile_definitions(rm_ui_tests PRIVATE RM_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   catch_discover_tests(rm_ui_tests PROPERTIES LABELS ui)
 
   # QML tests run offscreen with Qt's software renderer, so they need no GPU.
@@ -135,8 +135,8 @@ if(RM_BUILD_UI)
   target_link_libraries(rm_qml_tests PRIVATE rm_ui rm_ui_qml Qt6::QuickTest Qt6::Quick)
   target_link_options(rm_qml_tests PRIVATE -Wl,--no-as-needed)
   target_compile_definitions(rm_qml_tests PRIVATE
-    RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-    QUICK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests/qml")
+    RM_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    QUICK_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/qml")
   add_test(NAME qml_homescreen COMMAND rm_qml_tests)
   set_tests_properties(qml_homescreen PROPERTIES
     LABELS ui
@@ -207,7 +207,7 @@ if(RM_BUILD_RENDER)
   add_executable(rm_render_tests tests/render_test.cpp tests/show_runner_test.cpp tests/output_test.cpp tests/engine_test.cpp
     tests/engine_rating_test.cpp tests/dashboard_server_test.cpp tests/engine_pause_test.cpp tests/engine_idle_test.cpp)
   target_link_libraries(rm_render_tests PRIVATE rm_render httplib::httplib Threads::Threads Catch2::Catch2WithMain)
-  target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+  target_compile_definitions(rm_render_tests PRIVATE RM_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   target_compile_options(rm_render_tests PRIVATE -Wall -Wextra -Wpedantic)
   catch_discover_tests(rm_render_tests TEST_SPEC "~[.]" PROPERTIES LABELS render)
 endif()
@@ -231,6 +231,6 @@ if(RM_BUILD_UI AND RM_BUILD_RENDER)
   add_executable(rm_app_tests tests/app_bridge_test.cpp tests/app_bridge_pause_test.cpp
     tests/headless_test.cpp tests/app_headless_test.cpp)
   target_link_libraries(rm_app_tests PRIVATE rm_app Qt6::Test Catch2::Catch2WithMain)
-  target_compile_definitions(rm_app_tests PRIVATE RM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+  target_compile_definitions(rm_app_tests PRIVATE RM_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
   catch_discover_tests(rm_app_tests PROPERTIES LABELS app)
 endif()
